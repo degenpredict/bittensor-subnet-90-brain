@@ -189,9 +189,9 @@ scratch/
 .local/
 
 # Development tools
-.python-version     # pyenv Python version file
-.claude/           # Claude Code configuration
-settings.local.json # Local IDE settings
+.python-version
+.claude/
+settings.local.json
 
 # Local Netlify folder
 .netlify
