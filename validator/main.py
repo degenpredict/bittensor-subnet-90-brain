@@ -9,6 +9,7 @@ The validator:
 """
 import asyncio
 import signal
+import os
 from typing import List, Dict, Optional, Set
 from datetime import datetime, timedelta
 import structlog
@@ -18,6 +19,7 @@ from shared.types import Statement, MinerResponse, ValidationResult
 from shared.config import get_config
 from shared.api import DegenBrainAPIClient
 from validator.weights import WeightsCalculator
+from validator.bittensor_integration import create_validator
 
 
 logger = structlog.get_logger()
@@ -70,11 +72,9 @@ class Validator:
         self.stats = ValidatorStats()
         self.active_miners: Set[int] = set()
         
-        # Bittensor components (will be initialized in setup)
-        self.wallet = None
-        self.subtensor = None
-        self.dendrite = None
-        self.metagraph = None
+        # Bittensor integration
+        use_mock = os.getenv("USE_MOCK_VALIDATOR", "false").lower() == "true"
+        self.bt_validator = create_validator(config, use_mock=use_mock)
         
         logger.info("Validator initialized", config=self.config.__dict__)
     
@@ -83,11 +83,8 @@ class Validator:
         Set up Bittensor components and connections.
         """
         try:
-            # TODO: Initialize Bittensor components in Phase 5
-            # self.wallet = bt.wallet(name=self.config.wallet_name, hotkey=self.config.hotkey_name)
-            # self.subtensor = bt.subtensor(network=self.config.network_uid)
-            # self.dendrite = bt.dendrite(wallet=self.wallet)
-            # self.metagraph = self.subtensor.metagraph(self.config.netuid)
+            # Initialize Bittensor validator
+            await self.bt_validator.setup()
             
             logger.info("Validator setup complete")
             
@@ -199,45 +196,22 @@ class Validator:
         """
         Query miners for their responses to a statement.
         
-        For now, this simulates miner responses. In Phase 5, this will
-        use Bittensor to actually query miners on the network.
+        Uses Bittensor network to actually query miners.
         """
-        # TODO: Implement actual Bittensor miner querying in Phase 5
-        # For now, simulate with mock responses
-        
         logger.info("Querying miners", statement=statement.statement[:50] + "...")
         
-        # Simulate 5-10 miners responding
-        import random
-        from shared.types import Resolution
-        
-        num_miners = random.randint(5, 10)
-        responses = []
-        
-        for i in range(num_miners):
-            # Simulate different miner behaviors
-            if random.random() < 0.7:  # 70% agree on resolution
-                resolution = Resolution.TRUE if random.random() < 0.5 else Resolution.FALSE
-                confidence = random.uniform(70, 95)
-            else:  # 30% are uncertain
-                resolution = Resolution.PENDING
-                confidence = random.uniform(30, 60)
+        try:
+            # Query miners through Bittensor network
+            responses = await self.bt_validator.query_miners(statement)
             
-            response = MinerResponse(
-                statement=statement.statement,
-                resolution=resolution,
-                confidence=confidence,
-                summary=f"Mock analysis from miner {i}",
-                sources=[f"source_{i}_1", f"source_{i}_2"],
-                miner_uid=i,
-                target_value=100000.0 if "100,000" in statement.statement else None
-            )
-            responses.append(response)
-        
-        self.stats.miners_queried += num_miners
-        logger.info("Received miner responses", count=len(responses))
-        
-        return responses
+            self.stats.miners_queried += len(responses)
+            logger.info("Received miner responses", count=len(responses))
+            
+            return responses
+            
+        except Exception as e:
+            logger.error("Failed to query miners", error=str(e))
+            return []
     
     async def _update_weights(self):
         """
@@ -247,12 +221,26 @@ class Validator:
         accumulated miner performance.
         """
         try:
-            # TODO: Implement actual weight setting in Phase 5
-            # For now, just log
-            logger.info("Updating miner weights", 
-                       statements_processed=self.stats.statements_processed)
+            # Calculate weights based on miner performance
+            # For now, use simple performance scoring
+            # In production, this would use accumulated performance metrics
             
-            self.stats.weights_updated += 1
+            scores = self.weights_calculator.get_miner_scores()
+            
+            if scores:
+                # Set weights on Bittensor network
+                success = await self.bt_validator.set_weights(scores)
+                
+                if success:
+                    logger.info("Updated miner weights", 
+                               statements_processed=self.stats.statements_processed,
+                               num_weights=len(scores))
+                    self.stats.weights_updated += 1
+                else:
+                    logger.warning("Failed to set weights on network")
+                    self.stats.errors += 1
+            else:
+                logger.debug("No weight updates needed")
             
         except Exception as e:
             logger.error("Failed to update weights", error=str(e))
@@ -268,7 +256,8 @@ class Validator:
         # Close API client
         await self.api_client.close()
         
-        # TODO: Clean up Bittensor components in Phase 5
+        # Clean up Bittensor components
+        await self.bt_validator.close()
     
     def get_stats(self) -> Dict:
         """

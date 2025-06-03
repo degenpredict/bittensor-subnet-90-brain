@@ -41,6 +41,9 @@ class WeightsCalculator:
             self.confidence_weight /= total_weight
             self.consistency_weight /= total_weight
             self.source_quality_weight /= total_weight
+        
+        # Track accumulated miner scores for weight setting
+        self.accumulated_scores = defaultdict(list)
     
     def calculate_scores(
         self,
@@ -304,6 +307,13 @@ class WeightsCalculator:
         for response in valid_responses:
             all_sources.update(response.sources)
         
+        # Store scores for weight calculation
+        for miner_uid, score in scores.items():
+            self.accumulated_scores[miner_uid].append(score)
+            # Keep only recent scores (last 100)
+            if len(self.accumulated_scores[miner_uid]) > 100:
+                self.accumulated_scores[miner_uid] = self.accumulated_scores[miner_uid][-100:]
+        
         return ValidationResult(
             consensus_resolution=consensus or Resolution.PENDING,
             consensus_confidence=avg_confidence,
@@ -312,3 +322,22 @@ class WeightsCalculator:
             miner_scores=scores,
             consensus_sources=list(all_sources)[:10]  # Top 10 sources
         )
+    
+    def get_miner_scores(self) -> Dict[int, float]:
+        """
+        Get accumulated miner scores for weight setting.
+        
+        Returns:
+            Dictionary mapping miner UID to average score
+        """
+        if not self.accumulated_scores:
+            return {}
+        
+        # Calculate average scores
+        avg_scores = {}
+        for miner_uid, scores in self.accumulated_scores.items():
+            if scores:
+                avg_scores[miner_uid] = sum(scores) / len(scores)
+        
+        # Normalize scores for weight setting
+        return self._normalize_scores(avg_scores)

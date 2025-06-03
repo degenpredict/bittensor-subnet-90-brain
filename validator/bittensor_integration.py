@@ -1,0 +1,365 @@
+"""
+Bittensor integration for production validator deployment.
+This module handles the actual Bittensor network communication.
+"""
+import asyncio
+import sys
+from typing import List, Dict, Optional, Tuple
+import structlog
+
+try:
+    import bittensor as bt
+    import torch
+    BITTENSOR_AVAILABLE = True
+except ImportError:
+    BITTENSOR_AVAILABLE = False
+    bt = None
+    torch = None
+
+from shared.types import Statement, MinerResponse, Resolution
+from shared.config import get_config
+
+logger = structlog.get_logger()
+
+
+class BittensorValidator:
+    """
+    Production Bittensor validator for Subnet 90.
+    Handles actual network communication and weight setting.
+    """
+    
+    def __init__(self, config: Optional[Dict] = None):
+        """Initialize Bittensor validator."""
+        if not BITTENSOR_AVAILABLE:
+            raise ImportError(
+                "Bittensor not available. Install with: pip install bittensor"
+            )
+        
+        self.config = get_config()
+        if config:
+            for key, value in config.items():
+                setattr(self.config, key, value)
+        
+        # Initialize Bittensor components
+        self.wallet = None
+        self.subtensor = None
+        self.dendrite = None
+        self.metagraph = None
+        self.axon = None
+        
+        logger.info("BittensorValidator initialized", 
+                   network=self.config.network,
+                   netuid=self.config.subnet_uid)
+    
+    async def setup(self):
+        """Set up Bittensor components."""
+        try:
+            # Initialize wallet
+            self.wallet = bt.wallet(
+                name=self.config.wallet_name,
+                hotkey=self.config.hotkey_name
+            )
+            logger.info("Wallet loaded", 
+                       coldkey=self.wallet.coldkey.ss58_address,
+                       hotkey=self.wallet.hotkey.ss58_address)
+            
+            # Initialize subtensor
+            self.subtensor = bt.subtensor(network=self.config.network)
+            logger.info("Connected to subtensor", 
+                       network=self.config.network,
+                       chain_endpoint=self.subtensor.chain_endpoint)
+            
+            # Initialize dendrite for querying miners
+            self.dendrite = bt.dendrite(wallet=self.wallet)
+            logger.info("Dendrite initialized")
+            
+            # Get metagraph
+            self.metagraph = self.subtensor.metagraph(netuid=self.config.subnet_uid)
+            logger.info("Metagraph synced", 
+                       neurons=len(self.metagraph.neurons),
+                       netuid=self.config.subnet_uid)
+            
+            # Check if registered
+            if not self.subtensor.is_hotkey_registered(
+                netuid=self.config.subnet_uid, 
+                hotkey_ss58=self.wallet.hotkey.ss58_address
+            ):
+                logger.error("Hotkey not registered on subnet")
+                raise ValueError(f"Hotkey not registered on subnet {self.config.subnet_uid}")
+            
+            logger.info("Bittensor setup complete")
+            
+        except Exception as e:
+            logger.error("Failed to setup Bittensor components", error=str(e))
+            raise
+    
+    async def query_miners(self, statement: Statement) -> List[MinerResponse]:
+        """
+        Query miners on the Bittensor network for statement verification.
+        
+        Args:
+            statement: Statement to verify
+            
+        Returns:
+            List of miner responses
+        """
+        if not self.dendrite or not self.metagraph:
+            raise ValueError("Bittensor components not initialized")
+        
+        logger.info("Querying miners on network", 
+                   statement=statement.statement[:50] + "...",
+                   num_miners=len(self.metagraph.neurons))
+        
+        try:
+            # Sync metagraph to get latest state
+            self.metagraph.sync(subtensor=self.subtensor)
+            
+            # Get active miners (non-validators)
+            miner_axons = []
+            miner_uids = []
+            
+            for uid, neuron in enumerate(self.metagraph.neurons):
+                # Skip if this is our own neuron
+                if neuron.hotkey == self.wallet.hotkey.ss58_address:
+                    continue
+                
+                # Skip if neuron is not active
+                if not neuron.axon_info.is_serving:
+                    continue
+                
+                # Add to query list
+                miner_axons.append(neuron.axon_info)
+                miner_uids.append(uid)
+            
+            if not miner_axons:
+                logger.warning("No active miners found")
+                return []
+            
+            logger.info("Found active miners", count=len(miner_axons))
+            
+            # Create synapse for statement verification
+            # Note: This would need to be a custom synapse type for Subnet 90
+            # For now, we'll use a placeholder structure
+            
+            # TODO: Replace with actual Subnet 90 synapse
+            class VerifyStatementSynapse(bt.Synapse):
+                """Custom synapse for statement verification."""
+                statement: str
+                end_date: str
+                created_at: str
+                initial_value: Optional[float] = None
+                
+                # Response fields
+                resolution: Optional[str] = None
+                confidence: Optional[float] = None
+                summary: Optional[str] = None
+                sources: Optional[List[str]] = None
+                
+            # Create synapse
+            synapse = VerifyStatementSynapse(
+                statement=statement.statement,
+                end_date=statement.end_date,
+                created_at=statement.createdAt,
+                initial_value=statement.initialValue
+            )
+            
+            # Query miners
+            responses = await self.dendrite(
+                axons=miner_axons,
+                synapse=synapse,
+                timeout=self.config.query_timeout
+            )
+            
+            # Convert responses to MinerResponse objects
+            miner_responses = []
+            for i, response in enumerate(responses):
+                if response and hasattr(response, 'resolution'):
+                    try:
+                        # Convert Bittensor response to our format
+                        miner_response = MinerResponse(
+                            statement=statement.statement,
+                            resolution=Resolution(response.resolution),
+                            confidence=response.confidence or 0.0,
+                            summary=response.summary or "No summary provided",
+                            sources=response.sources or [],
+                            miner_uid=miner_uids[i]
+                        )
+                        miner_responses.append(miner_response)
+                        
+                    except Exception as e:
+                        logger.warning(f"Failed to parse response from miner {miner_uids[i]}", 
+                                     error=str(e))
+            
+            logger.info("Received miner responses", 
+                       total_queried=len(miner_axons),
+                       valid_responses=len(miner_responses))
+            
+            return miner_responses
+            
+        except Exception as e:
+            logger.error("Failed to query miners", error=str(e))
+            return []
+    
+    async def set_weights(self, scores: Dict[int, float]) -> bool:
+        """
+        Set weights on the Bittensor network based on miner scores.
+        
+        Args:
+            scores: Dictionary mapping miner UID to normalized score
+            
+        Returns:
+            True if weights were set successfully
+        """
+        if not self.subtensor or not self.wallet:
+            raise ValueError("Bittensor components not initialized")
+        
+        try:
+            # Prepare weights tensor
+            num_neurons = len(self.metagraph.neurons)
+            weights = torch.zeros(num_neurons)
+            
+            # Set weights based on scores
+            for uid, score in scores.items():
+                if 0 <= uid < num_neurons:
+                    weights[uid] = score
+            
+            # Normalize weights
+            if weights.sum() > 0:
+                weights = weights / weights.sum()
+            
+            logger.info("Setting weights on network", 
+                       num_weights=len(scores),
+                       total_weight=weights.sum().item())
+            
+            # Set weights on chain
+            success = self.subtensor.set_weights(
+                wallet=self.wallet,
+                netuid=self.config.subnet_uid,
+                uids=torch.arange(num_neurons),
+                weights=weights,
+                wait_for_inclusion=True,
+                wait_for_finalization=False
+            )
+            
+            if success:
+                logger.info("Weights set successfully")
+            else:
+                logger.error("Failed to set weights")
+            
+            return success
+            
+        except Exception as e:
+            logger.error("Failed to set weights", error=str(e))
+            return False
+    
+    def get_network_info(self) -> Dict:
+        """Get current network information."""
+        if not self.metagraph:
+            return {}
+        
+        return {
+            "netuid": self.config.subnet_uid,
+            "network": self.config.network,
+            "total_neurons": len(self.metagraph.neurons),
+            "registered": self.subtensor.is_hotkey_registered(
+                netuid=self.config.subnet_uid,
+                hotkey_ss58=self.wallet.hotkey.ss58_address
+            ) if self.subtensor and self.wallet else False,
+            "stake": self.metagraph.total_stake.sum().item() if self.metagraph.total_stake is not None else 0,
+            "block": self.subtensor.block if self.subtensor else 0
+        }
+    
+    async def close(self):
+        """Clean up Bittensor connections."""
+        if self.dendrite:
+            # Close any open connections
+            pass
+        
+        logger.info("Bittensor validator closed")
+
+
+# Mock version for testing without Bittensor
+class MockBittensorValidator:
+    """Mock validator for testing without Bittensor network."""
+    
+    def __init__(self, config: Optional[Dict] = None):
+        """Initialize mock validator."""
+        self.config = get_config()
+        if config:
+            for key, value in config.items():
+                setattr(self.config, key, value)
+        
+        logger.info("MockBittensorValidator initialized (testing mode)")
+    
+    async def setup(self):
+        """Mock setup."""
+        logger.info("Mock Bittensor setup complete")
+    
+    async def query_miners(self, statement: Statement) -> List[MinerResponse]:
+        """Mock miner querying."""
+        # Return simulated responses (same as current implementation)
+        import random
+        
+        num_miners = random.randint(5, 10)
+        responses = []
+        
+        for i in range(num_miners):
+            if random.random() < 0.7:  # 70% agree on resolution
+                resolution = Resolution.TRUE if random.random() < 0.5 else Resolution.FALSE
+                confidence = random.uniform(70, 95)
+            else:  # 30% are uncertain
+                resolution = Resolution.PENDING
+                confidence = random.uniform(30, 60)
+            
+            response = MinerResponse(
+                statement=statement.statement,
+                resolution=resolution,
+                confidence=confidence,
+                summary=f"Mock analysis from miner {i}",
+                sources=[f"source_{i}_1", f"source_{i}_2"],
+                miner_uid=i,
+                target_value=100000.0 if "100,000" in statement.statement else None
+            )
+            responses.append(response)
+        
+        logger.info("Mock miner responses generated", count=len(responses))
+        return responses
+    
+    async def set_weights(self, scores: Dict[int, float]) -> bool:
+        """Mock weight setting."""
+        logger.info("Mock weights set", num_weights=len(scores))
+        return True
+    
+    def get_network_info(self) -> Dict:
+        """Mock network info."""
+        return {
+            "netuid": self.config.subnet_uid,
+            "network": "mock",
+            "total_neurons": 10,
+            "registered": True,
+            "stake": 1000.0,
+            "block": 12345
+        }
+    
+    async def close(self):
+        """Mock cleanup."""
+        logger.info("Mock Bittensor validator closed")
+
+
+def create_validator(config: Optional[Dict] = None, use_mock: bool = False) -> BittensorValidator:
+    """
+    Factory function to create the appropriate validator.
+    
+    Args:
+        config: Optional configuration
+        use_mock: If True, use mock validator for testing
+        
+    Returns:
+        Validator instance
+    """
+    if use_mock or not BITTENSOR_AVAILABLE:
+        if not use_mock:
+            logger.warning("Bittensor not available, using mock validator")
+        return MockBittensorValidator(config)
+    else:
+        return BittensorValidator(config)

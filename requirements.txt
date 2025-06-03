@@ -11,7 +11,7 @@ pytest>=8.4.0
 pytest-asyncio>=1.0.0
 
 # Bittensor (for Phase 5)
-# bittensor>=7.0.0  # Uncomment for Phase 5 implementation
+bittensor>=7.0.0  # Production deployment
 
 # Optional: Production dependencies
 # wandb>=0.16.0     # For experiment tracking
