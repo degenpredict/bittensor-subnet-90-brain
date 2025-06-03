@@ -1,0 +1,19 @@
+# Core dependencies
+pydantic>=2.11.0
+structlog>=25.0.0
+httpx>=0.28.0
+tenacity>=9.1.0
+numpy>=2.2.0
+python-dotenv>=1.1.0
+
+# Testing dependencies
+pytest>=8.4.0
+pytest-asyncio>=1.0.0
+
+# Bittensor (for Phase 5)
+# bittensor>=7.0.0  # Uncomment for Phase 5 implementation
+
+# Optional: Production dependencies
+# wandb>=0.16.0     # For experiment tracking
+# prometheus-client>=0.19.0  # For metrics export
+# ccxt>=4.0.0       # For crypto exchange APIs in advanced agents
