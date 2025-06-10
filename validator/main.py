@@ -120,8 +120,8 @@ class Validator:
                         await self._process_statement(statement)
                         self.stats.statements_processed += 1
                     
-                    # Update weights periodically
-                    if self.stats.statements_processed % 10 == 0:
+                    # Update weights more frequently (every 2 statements) to start emissions
+                    if self.stats.statements_processed % 2 == 0:
                         await self._update_weights()
                     
                     # Brief pause between cycles
@@ -218,29 +218,33 @@ class Validator:
         Update miner weights on the Bittensor network.
         
         This is called periodically to update weights based on
-        accumulated miner performance.
+        accumulated miner performance. If no scores available,
+        uses bootstrap mode to start emissions.
         """
         try:
             # Calculate weights based on miner performance
-            # For now, use simple performance scoring
-            # In production, this would use accumulated performance metrics
-            
             scores = self.weights_calculator.get_miner_scores()
             
+            # Force weight setting to enable emissions
             if scores:
-                # Set weights on Bittensor network
+                # Normal mode: use performance-based scores
                 success = await self.bt_validator.set_weights(scores)
-                
-                if success:
-                    logger.info("Updated miner weights", 
-                               statements_processed=self.stats.statements_processed,
-                               num_weights=len(scores))
-                    self.stats.weights_updated += 1
-                else:
-                    logger.warning("Failed to set weights on network")
-                    self.stats.errors += 1
+                logger.info("Set performance-based weights", 
+                           statements_processed=self.stats.statements_processed,
+                           num_weights=len(scores))
             else:
-                logger.debug("No weight updates needed")
+                # Bootstrap mode: set equal weights to start emissions
+                logger.info("No performance scores available, using bootstrap weights")
+                success = await self.bt_validator.set_weights({}, force_equal_weights=True)
+            
+            if success:
+                self.stats.weights_updated += 1
+                logger.info("Weights updated successfully", 
+                           mode="performance" if scores else "bootstrap",
+                           statements_processed=self.stats.statements_processed)
+            else:
+                logger.warning("Failed to set weights on network")
+                self.stats.errors += 1
             
         except Exception as e:
             logger.error("Failed to update weights", error=str(e))

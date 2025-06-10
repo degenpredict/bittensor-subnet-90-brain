@@ -18,6 +18,7 @@ except ImportError:
 
 from shared.types import Statement, MinerResponse, Resolution
 from shared.config import get_config
+from shared.protocol import DegenBrainSynapse, ProtocolValidator, LegacyProtocolHandler
 
 logger = structlog.get_logger()
 
@@ -137,26 +138,8 @@ class BittensorValidator:
             
             logger.info("Found active miners", count=len(miner_axons))
             
-            # Create synapse for statement verification
-            # Note: This would need to be a custom synapse type for Subnet 90
-            # For now, we'll use a placeholder structure
-            
-            # TODO: Replace with actual Subnet 90 synapse
-            class VerifyStatementSynapse(bt.Synapse):
-                """Custom synapse for statement verification."""
-                statement: str
-                end_date: str
-                created_at: str
-                initial_value: Optional[float] = None
-                
-                # Response fields
-                resolution: Optional[str] = None
-                confidence: Optional[float] = None
-                summary: Optional[str] = None
-                sources: Optional[List[str]] = None
-                
-            # Create synapse
-            synapse = VerifyStatementSynapse(
+            # Create synapse using official Subnet 90 protocol
+            synapse = ProtocolValidator.create_request_synapse(
                 statement=statement.statement,
                 end_date=statement.end_date,
                 created_at=statement.createdAt,
@@ -170,25 +153,12 @@ class BittensorValidator:
                 timeout=self.config.query_timeout
             )
             
-            # Convert responses to MinerResponse objects
+            # Convert responses to MinerResponse objects with protocol handling
             miner_responses = []
             for i, response in enumerate(responses):
-                if response and hasattr(response, 'resolution'):
-                    try:
-                        # Convert Bittensor response to our format
-                        miner_response = MinerResponse(
-                            statement=statement.statement,
-                            resolution=Resolution(response.resolution),
-                            confidence=response.confidence or 0.0,
-                            summary=response.summary or "No summary provided",
-                            sources=response.sources or [],
-                            miner_uid=miner_uids[i]
-                        )
-                        miner_responses.append(miner_response)
-                        
-                    except Exception as e:
-                        logger.warning(f"Failed to parse response from miner {miner_uids[i]}", 
-                                     error=str(e))
+                parsed_response = self.parse_miner_response(response, miner_uids[i])
+                if parsed_response:
+                    miner_responses.append(parsed_response)
             
             logger.info("Received miner responses", 
                        total_queried=len(miner_axons),
@@ -200,12 +170,13 @@ class BittensorValidator:
             logger.error("Failed to query miners", error=str(e))
             return []
     
-    async def set_weights(self, scores: Dict[int, float]) -> bool:
+    async def set_weights(self, scores: Dict[int, float], force_equal_weights: bool = False) -> bool:
         """
         Set weights on the Bittensor network based on miner scores.
         
         Args:
             scores: Dictionary mapping miner UID to normalized score
+            force_equal_weights: If True, set equal weights to bootstrap emissions
             
         Returns:
             True if weights were set successfully
@@ -218,18 +189,40 @@ class BittensorValidator:
             num_neurons = len(self.metagraph.neurons)
             weights = torch.zeros(num_neurons)
             
-            # Set weights based on scores
-            for uid, score in scores.items():
-                if 0 <= uid < num_neurons:
-                    weights[uid] = score
-            
-            # Normalize weights
-            if weights.sum() > 0:
-                weights = weights / weights.sum()
+            if force_equal_weights or len(scores) == 0:
+                # Bootstrap mode: set equal weights to start emissions
+                logger.info("Using bootstrap equal weights to start emissions")
+                active_miners = []
+                for uid, neuron in enumerate(self.metagraph.neurons):
+                    # Skip our own neuron
+                    if neuron.hotkey == self.wallet.hotkey.ss58_address:
+                        continue
+                    # Include all registered miners for bootstrap
+                    active_miners.append(uid)
+                
+                if active_miners:
+                    equal_weight = 1.0 / len(active_miners)
+                    for uid in active_miners:
+                        weights[uid] = equal_weight
+                    logger.info("Set equal weights for bootstrap", 
+                               active_miners=len(active_miners))
+                else:
+                    logger.warning("No miners found for bootstrap weights")
+                    return False
+            else:
+                # Normal mode: use performance-based scores
+                for uid, score in scores.items():
+                    if 0 <= uid < num_neurons:
+                        weights[uid] = score
+                
+                # Normalize weights
+                if weights.sum() > 0:
+                    weights = weights / weights.sum()
             
             logger.info("Setting weights on network", 
-                       num_weights=len(scores),
-                       total_weight=weights.sum().item())
+                       num_weights=len(scores) if scores else len([w for w in weights if w > 0]),
+                       total_weight=weights.sum().item(),
+                       bootstrap=force_equal_weights or len(scores) == 0)
             
             # Set weights on chain
             success = self.subtensor.set_weights(
@@ -276,6 +269,59 @@ class BittensorValidator:
             pass
         
         logger.info("Bittensor validator closed")
+    
+    def parse_miner_response(self, response, miner_uid: int) -> Optional[MinerResponse]:
+        """
+        Parse miner response with graceful handling of protocol mismatches.
+        
+        Args:
+            response: Raw response from miner
+            miner_uid: UID of the responding miner
+            
+        Returns:
+            MinerResponse object or None if unparseable
+        """
+        if response is None:
+            logger.warning(f"Received None response from miner {miner_uid}")
+            return None
+        
+        try:
+            # First try to parse as proper DegenBrainSynapse
+            if isinstance(response, DegenBrainSynapse) and ProtocolValidator.is_valid_synapse(response):
+                return MinerResponse(
+                    statement=response.statement,
+                    resolution=Resolution(response.resolution),
+                    confidence=response.confidence,
+                    summary=response.summary or "No summary provided",
+                    sources=response.sources or [],
+                    miner_uid=miner_uid,
+                    target_value=response.target_value
+                )
+            
+            # Try legacy protocol parsing
+            legacy_data = LegacyProtocolHandler.try_parse_legacy_response(response)
+            if legacy_data:
+                logger.info(f"Parsed legacy response from miner {miner_uid}")
+                return MinerResponse(
+                    statement=legacy_data.get("statement", "Unknown statement"),
+                    resolution=Resolution(legacy_data["resolution"]),
+                    confidence=legacy_data["confidence"],
+                    summary=legacy_data["summary"],
+                    sources=legacy_data["sources"],
+                    miner_uid=miner_uid,
+                    target_value=legacy_data.get("target_value")
+                )
+            
+            # If all parsing fails, log the issue but continue
+            logger.warning(f"Could not parse response from miner {miner_uid}", 
+                         response_type=type(response).__name__,
+                         has_resolution=hasattr(response, 'resolution'))
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Failed to parse response from miner {miner_uid}", 
+                         error=str(e))
+            return None
 
 
 # Mock version for testing without Bittensor

@@ -1,17 +1,19 @@
 """
 Miner main entry point for DegenBrain subnet.
+Serves verification requests via Bittensor axon server.
 """
 import asyncio
 import signal
 import sys
 import time
+import os
 from typing import Optional, Dict, Any
 import structlog
 
-from shared import get_config, get_task, MinerResponse, Statement
-from shared.api import DegenBrainAPIClient
+from shared.config import get_config
 from miner.agents.dummy_agent import DummyAgent
 from miner.agents.base_agent import BaseAgent
+from miner.bittensor_integration import create_miner
 
 
 # Set up structured logging
@@ -36,7 +38,7 @@ logger = structlog.get_logger()
 
 class Miner:
     """
-    Main miner class that polls for tasks and processes them.
+    Main miner class that serves verification requests via Bittensor axon.
     """
     
     def __init__(self, agent: Optional[BaseAgent] = None):
@@ -48,15 +50,17 @@ class Miner:
         """
         self.config = get_config()
         self.agent = agent or self._create_default_agent()
-        self.api_client = DegenBrainAPIClient()
         self.running = False
-        self.tasks_processed = 0
-        self.last_task_time = None
+        
+        # Initialize Bittensor miner
+        use_mock = os.getenv("USE_MOCK_MINER", "false").lower() == "true"
+        self.bt_miner = create_miner(self.agent, use_mock=use_mock)
         
         logger.info("Miner initialized", 
                    agent=self.agent.name,
                    network=self.config.network,
-                   miner_port=self.config.miner_port)
+                   miner_port=self.config.miner_port,
+                   mock_mode=use_mock)
     
     def _create_default_agent(self) -> BaseAgent:
         """Create the default agent based on config."""
@@ -76,12 +80,18 @@ class Miner:
             return DummyAgent()
     
     async def setup(self):
-        """Set up miner components."""
-        # Currently minimal setup, will expand in Phase 5
-        logger.info("Miner setup complete")
+        """Set up Bittensor miner components."""
+        try:
+            # Initialize Bittensor miner
+            await self.bt_miner.setup()
+            logger.info("Miner setup complete")
+            
+        except Exception as e:
+            logger.error("Failed to setup miner", error=str(e))
+            raise
     
     async def start(self):
-        """Start the miner main loop."""
+        """Start the miner axon server."""
         self.running = True
         logger.info("Miner starting...")
         
@@ -90,113 +100,48 @@ class Miner:
         signal.signal(signal.SIGTERM, self._signal_handler)
         
         try:
-            await self._main_loop()
+            # Setup components
+            await self.setup()
+            
+            # Start serving requests
+            await self.bt_miner.start_serving()
+            
+            # Keep running until shutdown
+            await self._serve_forever()
+            
         except Exception as e:
-            logger.error("Error in main loop", error=str(e))
+            logger.error("Error starting miner", error=str(e))
         finally:
             await self.shutdown()
     
-    async def _main_loop(self):
-        """Main polling loop."""
-        poll_interval = 10  # seconds
+    async def _serve_forever(self):
+        """Keep the server running and log periodic stats."""
+        logger.info("Miner serving requests via Bittensor axon")
+        
+        # Log stats every 5 minutes
+        stats_interval = 300  # seconds
+        last_stats_time = time.time()
         
         while self.running:
             try:
-                # Get a task
-                task = await self._get_next_task()
+                # Sleep briefly
+                await asyncio.sleep(10)
                 
-                if task:
-                    # Process the task
-                    response = await self._process_task(task)
-                    
-                    # Submit the response
-                    success = await self._submit_response(response)
-                    
-                    if success:
-                        self.tasks_processed += 1
-                        self.last_task_time = time.time()
-                        logger.info("Task completed successfully",
-                                   tasks_processed=self.tasks_processed)
-                else:
-                    logger.debug("No tasks available")
-                
-                # Wait before next poll
-                await asyncio.sleep(poll_interval)
+                # Log stats periodically
+                current_time = time.time()
+                if current_time - last_stats_time >= stats_interval:
+                    stats = self.get_stats()
+                    logger.info("Miner stats", **stats)
+                    last_stats_time = current_time
                 
             except asyncio.CancelledError:
-                logger.info("Main loop cancelled")
+                logger.info("Serve loop cancelled")
                 break
             except Exception as e:
-                logger.error("Error in polling loop", error=str(e))
-                await asyncio.sleep(poll_interval)
+                logger.error("Error in serve loop", error=str(e))
+                await asyncio.sleep(10)
     
-    async def _get_next_task(self) -> Optional[Statement]:
-        """Get the next task to process."""
-        try:
-            # In production, this would get tasks from validator
-            # For now, we'll use the API directly
-            task = await get_task()
-            
-            if task:
-                logger.info("Received task", 
-                           statement=task.statement[:50] + "...",
-                           end_date=task.end_date)
-            
-            return task
-            
-        except Exception as e:
-            logger.error("Error getting task", error=str(e))
-            return None
-    
-    async def _process_task(self, task: Statement) -> MinerResponse:
-        """Process a task using the agent."""
-        logger.info("Processing task", statement_id=task.id)
-        
-        start_time = time.time()
-        
-        try:
-            # Use the agent to verify the statement
-            response = await self.agent.process_statement(task)
-            
-            # Add miner metadata
-            response.miner_uid = self.config.subnet_uid  # This would be actual miner UID
-            
-            process_time = time.time() - start_time
-            logger.info("Task processed",
-                       resolution=response.resolution.value,
-                       confidence=response.confidence,
-                       process_time=f"{process_time:.2f}s")
-            
-            return response
-            
-        except Exception as e:
-            logger.error("Error processing task", error=str(e))
-            # Return error response
-            return MinerResponse(
-                statement=task.statement,
-                resolution="PENDING",
-                confidence=0.0,
-                summary=f"Error processing: {str(e)}",
-                sources=["error"]
-            )
-    
-    async def _submit_response(self, response: MinerResponse) -> bool:
-        """Submit response to validator."""
-        try:
-            # In production, this would submit to validator via Bittensor
-            # For now, we'll just log it
-            logger.info("Submitting response",
-                       resolution=response.resolution,
-                       confidence=response.confidence)
-            
-            # Simulate submission
-            await asyncio.sleep(0.1)
-            
-            return True
-            
-        except Exception as e:
-            logger.error("Error submitting response", error=str(e))
-            return False
+    # Note: Task processing now handled by BittensorMiner.verify_statement()
     
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals."""
@@ -208,25 +153,25 @@ class Miner:
         logger.info("Shutting down miner...")
         self.running = False
         
-        # Close API client
-        if hasattr(self, 'api_client'):
-            await self.api_client.close()
+        # Stop Bittensor miner
+        if hasattr(self, 'bt_miner'):
+            await self.bt_miner.close()
         
-        logger.info("Miner shutdown complete",
-                   tasks_processed=self.tasks_processed)
+        logger.info("Miner shutdown complete")
     
     def get_stats(self) -> Dict[str, Any]:
         """Get miner statistics."""
-        uptime = 0
-        if self.last_task_time:
-            uptime = time.time() - self.last_task_time
-            
-        return {
-            "tasks_processed": self.tasks_processed,
-            "uptime_seconds": uptime,
+        stats = {
             "agent": self.agent.get_info(),
             "is_running": self.running
         }
+        
+        # Add Bittensor miner stats
+        if hasattr(self, 'bt_miner'):
+            network_info = self.bt_miner.get_network_info()
+            stats.update(network_info)
+        
+        return stats
 
 
 async def main():

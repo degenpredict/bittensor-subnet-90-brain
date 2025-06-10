@@ -77,10 +77,8 @@ class DummyAgent(BaseAgent):
             confidence=confidence,
             summary=summary,
             sources=sources,
-            target_date=statement.end_date,
             target_value=target_value,
-            current_value=current_value,
-            direction_inferred="increase" if target_value and current_value < target_value else "decrease"
+            reasoning=f"Dummy agent analysis: Resolution={resolution.value}, Confidence={confidence:.1f}%"
         )
     
     def _determine_resolution(self, statement: Statement) -> Resolution:
