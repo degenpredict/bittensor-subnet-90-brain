@@ -187,7 +187,7 @@ class BittensorMiner:
             
             return error_response
     
-    def blacklist(self, synapse: DegenBrainSynapse) -> bool:
+    def blacklist(self, synapse: DegenBrainSynapse):
         """
         Determine if a request should be blacklisted.
         
@@ -195,29 +195,29 @@ class BittensorMiner:
             synapse: Incoming synapse
             
         Returns:
-            True if request should be blacklisted
+            Tuple of (blacklist_flag, reason)
         """
         # Basic blacklist logic
         try:
             # Check if synapse has required fields
             if not synapse.statement or not synapse.end_date:
                 logger.warning("Blacklisting request with missing fields")
-                return True
+                return True, "Missing required fields"
             
             # Check statement length
             if len(synapse.statement) < 10 or len(synapse.statement) > 1000:
                 logger.warning("Blacklisting request with invalid statement length",
                              length=len(synapse.statement))
-                return True
+                return True, f"Invalid statement length: {len(synapse.statement)}"
             
             # Could add more sophisticated blacklisting here
             # e.g., rate limiting, validator reputation, etc.
             
-            return False
+            return False, "Request accepted"
             
         except Exception as e:
             logger.warning("Error in blacklist check", error=str(e))
-            return True  # Blacklist on error to be safe
+            return True, f"Blacklist error: {str(e)}"
     
     def priority(self, synapse: DegenBrainSynapse) -> float:
         """
@@ -358,9 +358,11 @@ class MockBittensorMiner:
         
         return response
     
-    def blacklist(self, synapse: DegenBrainSynapse) -> bool:
+    def blacklist(self, synapse: DegenBrainSynapse):
         """Mock blacklist check."""
-        return len(synapse.statement) < 10
+        if len(synapse.statement) < 10:
+            return True, "Statement too short"
+        return False, "Request accepted"
     
     def priority(self, synapse: DegenBrainSynapse) -> float:
         """Mock priority calculation."""
