@@ -65,47 +65,49 @@ class DegenBrainAPIClient:
     )
     async def fetch_statements(self) -> List[Statement]:
         """
-        Fetch unresolved statements from the API.
+        Fetch pending statements from brain-api.
         
-        This is a placeholder for now. In production, this would
-        fetch from a dedicated endpoint that returns unresolved
-        predictions.
+        Fetches from /api/markets/pending endpoint to get statements
+        that need resolution by the subnet validators.
         
         Returns:
             List of Statement objects to resolve.
         """
         try:
-            # For now, we'll simulate fetching statements
-            # In production, this would be something like:
-            # response = await self.client.get(f"{self.api_url}/unresolved")
+            logger.info("Fetching pending statements from brain-api", api_url=self.api_url)
             
-            logger.info("Fetching unresolved statements", api_url=self.api_url)
+            # Fetch pending markets from brain-api
+            response = await self.client.get(f"{self.api_url}/api/markets/pending")
+            response.raise_for_status()
             
-            # Simulated response for testing
-            # TODO: Replace with actual API call when endpoint is available
-            sample_statements = [
-                {
-                    "statement": "Bitcoin will cross $100,000 by December 31, 2024",
-                    "end_date": "2024-12-31T23:59:59Z",
-                    "createdAt": "2024-01-15T12:00:00Z",
-                    "initialValue": 42000.0,
-                    "id": "stmt_001"
-                },
-                {
-                    "statement": "Ethereum will reach $5,000 before July 1, 2024",
-                    "end_date": "2024-07-01T00:00:00Z",
-                    "createdAt": "2024-01-01T00:00:00Z",
-                    "initialValue": 2200.0,
-                    "id": "stmt_002"
+            data = response.json()
+            markets = data.get("markets", [])
+            
+            # Convert brain-api market format to Statement objects
+            statements = []
+            for market in markets:
+                statement_data = {
+                    "id": market["id"],
+                    "statement": market["statement"],
+                    "end_date": market["end_date"],
+                    "createdAt": market["createdAt"],
+                    "initialValue": market.get("initialValue"),
+                    "direction": market.get("direction"),
+                    "category": market.get("category")
                 }
-            ]
+                statements.append(Statement.from_dict(statement_data))
             
-            statements = [Statement.from_dict(stmt) for stmt in sample_statements]
-            logger.info("Fetched statements", count=len(statements))
+            logger.info("Fetched pending statements", count=len(statements), api_url=self.api_url)
             return statements
             
+        except httpx.HTTPStatusError as e:
+            logger.error("API returned error status", 
+                        status_code=e.response.status_code,
+                        detail=e.response.text,
+                        api_url=self.api_url)
+            raise
         except Exception as e:
-            logger.error("Failed to fetch statements", error=str(e))
+            logger.error("Failed to fetch statements", error=str(e), api_url=self.api_url)
             raise
     
     @retry(
@@ -161,9 +163,77 @@ class DegenBrainAPIClient:
             logger.error("Failed to resolve statement", error=str(e))
             raise
     
+    async def submit_miner_responses(self, statement_id: str, validator_id: str, miner_responses: List[MinerResponse]) -> bool:
+        """
+        Submit miner responses to brain-api.
+        
+        Posts the consensus results from subnet validators back to brain-api
+        at /api/markets/{statement_id}/responses endpoint.
+        
+        Args:
+            statement_id: ID of the statement/market.
+            validator_id: ID of the validator submitting responses.
+            miner_responses: List of miner responses from the subnet.
+            
+        Returns:
+            True if successful, False otherwise.
+        """
+        try:
+            # Convert MinerResponse objects to brain-api format
+            formatted_responses = []
+            for response in miner_responses:
+                formatted_responses.append({
+                    "miner_id": str(response.miner_uid),
+                    "resolution": response.resolution.value if hasattr(response.resolution, 'value') else str(response.resolution),
+                    "confidence": float(response.confidence),
+                    "summary": response.summary,
+                    "sources": response.sources
+                })
+            
+            # Build submission payload
+            submission = {
+                "validator_id": validator_id,
+                "miner_responses": formatted_responses
+            }
+            
+            logger.info("Submitting miner responses to brain-api", 
+                       statement_id=statement_id,
+                       validator_id=validator_id,
+                       miner_count=len(miner_responses),
+                       api_url=self.api_url)
+            
+            # Submit to brain-api
+            response = await self.client.post(
+                f"{self.api_url}/api/markets/{statement_id}/responses",
+                json=submission
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            logger.info("Successfully submitted responses", 
+                       statement_id=statement_id,
+                       official_resolution=result.get("official_resolution"),
+                       miner_responses_stored=result.get("miner_responses_stored"))
+            return True
+            
+        except httpx.HTTPStatusError as e:
+            logger.error("API returned error status during submission", 
+                        status_code=e.response.status_code,
+                        detail=e.response.text,
+                        statement_id=statement_id)
+            return False
+        except Exception as e:
+            logger.error("Failed to submit miner responses", 
+                        statement_id=statement_id,
+                        error=str(e))
+            return False
+
     async def post_consensus(self, statement_id: str, consensus: Dict[str, Any]) -> bool:
         """
-        Post consensus result back to DegenBrain (optional).
+        Post consensus result back to DegenBrain (legacy method).
+        
+        This method is kept for backward compatibility.
+        Use submit_miner_responses() for new implementations.
         
         Args:
             statement_id: ID of the statement.
@@ -173,14 +243,7 @@ class DegenBrainAPIClient:
             True if successful, False otherwise.
         """
         try:
-            # This is optional functionality
-            # In production, might post to something like:
-            # response = await self.client.post(
-            #     f"{self.api_url}/consensus/{statement_id}",
-            #     json=consensus
-            # )
-            
-            logger.info("Posted consensus result", 
+            logger.info("Posted consensus result (legacy method)", 
                        statement_id=statement_id,
                        resolution=consensus.get("resolution"))
             return True

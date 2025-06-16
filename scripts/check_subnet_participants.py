@@ -37,7 +37,8 @@ def check_subnet_participants(netuid: int = 90):
         # Check if setting weights (validators set weights)
         weights_set = len([w for w in metagraph.weights[i] if w > 0]) if i < len(metagraph.weights) else 0
         
-        if stake > 0.1:  # Has meaningful stake - likely validator
+        # Special handling for subnet owner (UID 0) - always show as validator
+        if i == 0 or stake > 0.1:  # Subnet owner or has meaningful stake
             validators.append((i, neuron, stake, weights_set))
         else:  # No/minimal stake - likely miner
             miners.append((i, neuron, stake))
@@ -97,6 +98,7 @@ def check_active_validators(netuid: int = 90):
     # Check your specific registrations
     print("\n=== YOUR REGISTRATIONS ===")
     your_hotkeys = {
+        "5DwAxR": "subnet_owner_validator",  # Your actual subnet owner hotkey
         "5EFa44": "validator",
         "5C8bXe": "miner1", 
         "5G9EJv": "miner2",

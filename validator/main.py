@@ -179,12 +179,25 @@ class Validator:
             if validation_result.consensus_resolution.value != "PENDING":
                 self.stats.consensus_reached += 1
             
-            # Post consensus back to API (optional)
+            # Submit miner responses to brain-api
             if hasattr(statement, 'id') and statement.id:
-                await self.api_client.post_consensus(
+                # Get validator ID from wallet hotkey
+                validator_id = str(self.bt_validator.wallet.hotkey.ss58_address)
+                
+                # Submit all miner responses to brain-api
+                success = await self.api_client.submit_miner_responses(
                     statement.id,
-                    validation_result.to_dict()
+                    validator_id,
+                    responses
                 )
+                
+                if success:
+                    logger.info("Successfully submitted responses to brain-api",
+                               statement_id=statement.id,
+                               miner_count=len(responses))
+                else:
+                    logger.warning("Failed to submit responses to brain-api",
+                                  statement_id=statement.id)
             
         except Exception as e:
             logger.error("Failed to process statement", 

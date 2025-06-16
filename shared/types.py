@@ -35,6 +35,7 @@ class Statement:
     initialValue: Optional[float] = None
     direction: Optional[str] = None
     id: Optional[str] = None
+    category: Optional[str] = None
     
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -44,7 +45,8 @@ class Statement:
             "createdAt": self.createdAt,
             "initialValue": self.initialValue,
             "direction": self.direction,
-            "id": self.id
+            "id": self.id,
+            "category": self.category
         }
     
     @classmethod
@@ -215,7 +217,7 @@ class SubnetConfig:
             hotkey_name=env_dict.get("HOTKEY_NAME", "default"),
             network=env_dict.get("NETWORK", "finney"),
             subnet_uid=int(env_dict.get("SUBNET_UID", "90")),
-            api_url=env_dict.get("API_URL", "https://api.degenbrain.com/resolve"),
+            api_url=env_dict.get("API_URL", "https://api.subnet90.com"),
             validator_port=int(env_dict.get("VALIDATOR_PORT", "8090")),
             query_timeout=int(env_dict.get("QUERY_TIMEOUT", "60")),
             min_miners_required=int(env_dict.get("MIN_MINERS_REQUIRED", "3")),

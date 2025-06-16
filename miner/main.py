@@ -65,10 +65,28 @@ class Miner:
     def _create_default_agent(self) -> BaseAgent:
         """Create the default agent based on config."""
         agent_type = self.config.miner_agent
+        strategy = os.getenv("MINER_STRATEGY", "hybrid")
         
-        if agent_type == "dummy" or agent_type == "hybrid":
-            # For now, use dummy agent for both
-            # In future, we'll implement hybrid agent
+        # If strategy is set to use AI agent, create AIAgent
+        if strategy in ["brainstorm", "ai_reasoning", "hybrid"] and strategy != "dummy":
+            from miner.agents.ai_agent import AIAgent
+            
+            # Create AI agent config from environment variables
+            ai_config = {
+                "openai_api_key": os.getenv("OPENAI_API_KEY"),
+                "anthropic_api_key": os.getenv("ANTHROPIC_API_KEY"),
+                "coingecko_api_key": os.getenv("COINGECKO_API_KEY"),
+                "alpha_vantage_api_key": os.getenv("ALPHA_VANTAGE_API_KEY"),
+                "strategy": strategy,
+                "brainstorm_url": os.getenv("BRAINSTORM_URL", "https://degenbrain-459147590380.us-central1.run.app"),
+                "timeout": int(os.getenv("REQUEST_TIMEOUT", "30"))
+            }
+            
+            logger.info("Creating AI Agent", strategy=strategy, has_openai=bool(ai_config["openai_api_key"]))
+            return AIAgent(ai_config)
+        
+        elif agent_type == "dummy" or strategy == "dummy":
+            # Use dummy agent
             return DummyAgent({
                 "accuracy": 0.8,
                 "delay": 0.2,
