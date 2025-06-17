@@ -73,6 +73,7 @@ class MinerResponse(BaseModel):
     confidence: float = Field(ge=0, le=100)  # 0-100
     summary: str
     sources: List[str] = Field(default_factory=list)
+    reasoning: str = ""
     target_date: Optional[str] = None
     target_value: Optional[float] = None
     current_value: Optional[float] = None

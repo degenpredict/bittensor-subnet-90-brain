@@ -42,103 +42,28 @@ class DegenBrainSynapse(bt.Synapse):
     """
     
     # === REQUEST FIELDS (Validator → Miner) ===
-    statement: str = Field(
-        ..., 
-        description="The prediction statement to verify",
-        min_length=10,
-        max_length=1000
-    )
+    statement: str = ""
+    end_date: str = ""
+    created_at: str = ""
     
-    end_date: str = Field(
-        ...,
-        description="ISO format end date: '2024-12-31T23:59:59Z'",
-        pattern=r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
-    )
-    
-    created_at: str = Field(
-        ...,
-        description="ISO format creation date: '2024-06-04T19:35:56Z'",
-        pattern=r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
-    )
-    
-    initial_value: Optional[float] = Field(
-        None,
-        description="Current/initial value for numeric predictions"
-    )
-    
-    context: Optional[Dict[str, Any]] = Field(
-        default_factory=dict,
-        description="Additional context data for the prediction"
-    )
+    initial_value: Optional[float] = None
+    context: Optional[Dict[str, Any]] = None
     
     # === RESPONSE FIELDS (Miner → Validator) ===
-    resolution: str = Field(
-        default="PENDING",
-        description="Resolution state: TRUE, FALSE, or PENDING"
-    )
-    
-    confidence: float = Field(
-        default=0.0,
-        description="Confidence level 0.0-100.0",
-        ge=0.0,
-        le=100.0
-    )
-    
-    summary: str = Field(
-        default="",
-        description="Human-readable analysis summary",
-        max_length=500
-    )
-    
-    sources: List[str] = Field(
-        default_factory=list,
-        description="Source URLs used for verification",
-        max_items=10
-    )
-    
-    analysis_time: float = Field(
-        default=0.0,
-        description="Processing time in seconds",
-        ge=0.0
-    )
-    
-    reasoning: str = Field(
-        default="",
-        description="Step-by-step reasoning for the resolution",
-        max_length=1000
-    )
-    
-    target_value: Optional[float] = Field(
-        None,
-        description="Predicted/actual value for numeric predictions"
-    )
+    resolution: str = "PENDING"
+    confidence: float = 0.0
+    summary: str = ""
+    sources: List[str] = Field(default_factory=list)
+    analysis_time: float = 0.0
+    reasoning: str = ""
+    target_value: Optional[float] = None
     
     # === METADATA ===
-    protocol_version: str = Field(
-        default="1.0",
-        description="Protocol version for compatibility"
-    )
-    
-    miner_version: str = Field(
-        default="",
-        description="Miner software version"
-    )
+    protocol_version: str = "1.0"
+    miner_version: str = ""
     
     # === VALIDATORS ===
-    @validator('resolution')
-    def validate_resolution(cls, v):
-        """Ensure resolution is a valid enum value."""
-        if v not in [res.value for res in Resolution]:
-            raise ValueError(f"Resolution must be one of: {[res.value for res in Resolution]}")
-        return v
-    
-    @validator('sources')
-    def validate_sources(cls, v):
-        """Validate source URLs."""
-        for source in v:
-            if not isinstance(source, str) or len(source) > 200:
-                raise ValueError("Each source must be a string ≤ 200 characters")
-        return v
+    # Removed Pydantic validators for Bittensor 9.7.0 compatibility
 
 
 class ProtocolValidator:

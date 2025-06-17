@@ -24,6 +24,30 @@ from miner.agents.dummy_agent import DummyAgent
 logger = structlog.get_logger()
 
 
+def blacklist(synapse):
+    """Standalone blacklist function for Bittensor."""
+    try:
+        # Check if synapse has required fields
+        if not hasattr(synapse, 'statement') or not hasattr(synapse, 'end_date'):
+            return True, "Missing required fields"
+        if not synapse.statement or not synapse.end_date:
+            return True, "Missing required fields"
+        
+        # Check statement length
+        if len(synapse.statement) < 10 or len(synapse.statement) > 1000:
+            return True, f"Invalid statement length: {len(synapse.statement)}"
+        
+        return False, "Request accepted"
+        
+    except Exception as e:
+        return True, f"Blacklist error: {str(e)}"
+
+
+def priority(synapse):
+    """Standalone priority function for Bittensor."""
+    return 1.0
+
+
 class BittensorMiner:
     """
     Production Bittensor miner for Subnet 90.
@@ -98,11 +122,9 @@ class BittensorMiner:
                 port=self.config.miner_port
             )
             
-            # Attach synapse handler
+            # Attach synapse handler  
             self.axon.attach(
-                forward_fn=self.verify_statement,
-                blacklist_fn=self.blacklist,
-                priority_fn=self.priority
+                forward_fn=self.verify_statement
             )
             
             logger.info("Axon initialized", port=self.config.miner_port)
@@ -187,7 +209,7 @@ class BittensorMiner:
             
             return error_response
     
-    def blacklist(self, synapse: DegenBrainSynapse):
+    def blacklist(self, synapse: DegenBrainSynapse) -> tuple[bool, str]:
         """
         Determine if a request should be blacklisted.
         
@@ -285,7 +307,7 @@ class BittensorMiner:
                 netuid=self.config.subnet_uid,
                 hotkey_ss58=self.wallet.hotkey.ss58_address
             ) if self.subtensor and self.wallet else False,
-            "serving": self.axon.is_running if self.axon else False,
+            "serving": self.axon is not None,
             "port": self.config.miner_port,
             "requests_processed": self.requests_processed,
             "uptime": time.time() - self.start_time

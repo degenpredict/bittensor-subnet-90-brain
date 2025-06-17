@@ -1,374 +1,540 @@
-# DegenBrain Subnet 90 - Decentralized Prediction Market Resolution
+# Bittensor Subnet 90 (DegenBrain) - Production Setup Guide
 
-**Status: Phase 4 Complete ✅ | 71/71 Tests Passing**
+**Status: ✅ FULLY OPERATIONAL | Validator + 3 Miners Running Successfully**
 
-A fully implemented Bittensor subnet for automated verification of prediction market statements through distributed consensus.
+A Bittensor subnet for automated verification of prediction market statements through distributed consensus.
 
-## What We Built
+## 🚀 Quick Start (Easy Mode)
 
-✅ **Complete Validator System** - Orchestrates statement resolution and scores miners  
-✅ **Miner Agent Framework** - Extensible agents for statement verification  
-✅ **Consensus Algorithm** - Multi-factor scoring with confidence weighting  
-✅ **API Integration** - Full DegenBrain API client with retry logic  
-✅ **Comprehensive Testing** - 71 tests covering all components  
-✅ **Production Ready** - Error handling, logging, and monitoring
-
-## Quick Start
-
-### Prerequisites
+**For Validators:**
 ```bash
-python 3.11+
-pip install -r requirements.txt
+./start_validator.sh
 ```
 
-### Run Validator
+**For Miners:**
 ```bash
-export WALLET_NAME=my_validator
-export HOTKEY_NAME=default  
-export API_URL=https://api.degenbrain.com
-python run_validator.py
+./start_miner.sh
 ```
 
-### Run Miner  
+**Check Status:**
 ```bash
-export WALLET_NAME=my_miner
-export HOTKEY_NAME=default
-python run_miner.py
+./check_status.sh
 ```
 
-### Run Tests
+**Stop Everything:**
 ```bash
-python -m pytest tests/ -v
+./stop_all.sh
 ```
 
-## System Overview
+That's it! The scripts will guide you through everything.
+
+---
+
+## 📋 Table of Contents
+
+1. [System Overview](#system-overview)
+2. [Prerequisites](#prerequisites)
+3. [Environment Setup](#environment-setup)
+4. [Validator Setup](#validator-setup)
+5. [Miner Setup](#miner-setup)
+6. [Running the System](#running-the-system)
+7. [Monitoring & Troubleshooting](#monitoring--troubleshooting)
+8. [Configuration Reference](#configuration-reference)
+
+---
+
+## 🔄 System Overview
 
 The subnet enables automated verification of prediction statements by distributing verification tasks to miners who provide evidence-based resolution decisions.
 
-## How It Works
-
-### 1. Statement Processing Flow
+### How It Works
 ```
 DegenBrain API → Validator → Miners → Consensus → Bittensor Weights
 ```
 
-1. **Validator** fetches unresolved statements from DegenBrain API
-2. **Distributes** statements to miners across the Bittensor network  
+1. **Validator** fetches unresolved statements from `https://api.subnet90.com`
+2. **Distributes** statements to registered miners on subnet 90
 3. **Miners** analyze statements and return resolution + confidence + evidence
-4. **Validator** calculates consensus using confidence-weighted voting
-5. **Scores miners** based on accuracy, confidence, consistency, and source quality
-6. **Sets weights** on Bittensor to reward high-performing miners
-
-### 2. Multi-Factor Scoring Algorithm
-
-Miners are scored on 4 dimensions:
-- **Accuracy (40%)** - Agreement with consensus resolution
-- **Confidence (20%)** - Appropriate confidence levels for their answers  
-- **Consistency (30%)** - Agreement with other high-confidence miners
-- **Source Quality (10%)** - Reliable sources and evidence provided
-
-### 3. Agent-Based Architecture
-
-Miners use pluggable agents for verification:
-- **DummyAgent** - Reference implementation for testing
-- **Future agents** - Web scraping, API integration, LLM analysis
+4. **Validator** calculates consensus and scores miners based on performance
+5. **Sets weights** on Bittensor to reward high-performing miners
 
 ---
 
-## Tech Stack
+## ✅ Prerequisites
 
-**Language:** Python 3.11+  
-**Core Libraries:** `bittensor`, `pydantic`, `structlog`, `httpx`, `tenacity`  
-**Testing:** `pytest`, `pytest-asyncio`  
-**Architecture:** Async/await, dataclasses, type hints
+### System Requirements
+- **OS**: Linux (Ubuntu 20.04+ recommended)
+- **Python**: 3.11+
+- **RAM**: 2GB+ for validator, 1GB+ per miner
+- **Storage**: 10GB+ available space
+- **Network**: Stable internet connection
 
-## Project Structure
-
-```plaintext
-bittensor-subnet-90-brain/
-├── validator/              # Validator implementation
-│   ├── main.py            # Main validator loop & orchestration  
-│   ├── weights.py         # Scoring algorithm & consensus
-│   └── __init__.py
-├── miner/                 # Miner implementation  
-│   ├── main.py           # Main miner loop & task processing
-│   ├── agents/           # Verification agent implementations
-│   │   ├── base_agent.py    # Abstract base class
-│   │   ├── dummy_agent.py   # Reference implementation
-│   │   └── __init__.py
-│   └── __init__.py
-├── shared/               # Shared components
-│   ├── types.py         # Core data types & validation
-│   ├── api.py           # DegenBrain API client  
-│   ├── config.py        # Configuration management
-│   └── __init__.py
-├── tests/               # Comprehensive test suite (71 tests)
-│   ├── test_validator.py   # Validator & scoring tests (20)
-│   ├── test_miner.py      # Miner & agent tests (16) 
-│   ├── test_api.py        # API client tests (10)
-│   ├── test_types.py      # Data validation tests (15)
-│   └── test_config.py     # Configuration tests (10)
-├── run_validator.py     # Validator entry point
-├── run_miner.py        # Miner entry point  
-├── ARCHITECTURE.md     # Detailed technical documentation
-├── IMPLEMENTATION_PLAN.md  # Development roadmap
-└── requirements.txt    # Python dependencies
-```
-
-## Implementation Status
-
-**Phase 4 Complete ✅** - All core functionality implemented:
-
-- ✅ **Validator orchestration** with statement fetching and miner coordination
-- ✅ **Multi-factor scoring algorithm** with consensus calculation  
-- ✅ **Miner agent framework** with pluggable verification agents
-- ✅ **API integration** with retry logic and error handling
-- ✅ **Comprehensive testing** with 71 passing tests
-- ✅ **Production features** including logging, monitoring, and graceful shutdown
-
-**Next: Phase 5** - Bittensor network integration (actual miner querying and weight setting)
+### Bittensor Requirements
+- **TAO Balance**: 1+ TAO for registration and staking
+- **Bittensor CLI**: Installed and configured
+- **Wallets**: Created with coldkey and hotkeys
 
 ---
 
-## Setup & Usage
+## 🛠️ Environment Setup
 
-### 1. Installation
-
+### 1. Install System Dependencies
 ```bash
-# Clone repository
-git clone <repository-url>
-cd bittensor-subnet-90-brain
+# Update system
+sudo apt update && sudo apt upgrade -y
 
-# Create virtual environment  
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Install Python 3.11
+sudo apt install python3.11 python3.11-venv python3.11-dev -y
 
-# Install dependencies
-pip install -r requirements.txt
+# Install other dependencies
+sudo apt install git curl build-essential -y
 ```
 
-### 2. Configuration
-
-Required environment variables:
+### 2. Install Bittensor
 ```bash
-export WALLET_NAME=my_wallet      # Bittensor wallet name
-export HOTKEY_NAME=default        # Bittensor hotkey name  
-export API_URL=https://api.degenbrain.com/resolve
-```
-
-Optional environment variables:
-```bash
-export NETWORK=finney            # Bittensor network (default: finney)
-export SUBNET_UID=90            # Subnet number (default: 90)
-export VALIDATOR_PORT=8090      # Validator port (default: 8090)
-export MINER_PORT=8091         # Miner port (default: 8091)
-```
-
-### 3. Bittensor Setup
-
-```bash
-# Install Bittensor CLI
+# Install via pip
 pip install bittensor
 
-# Create wallet
-btcli wallet create --wallet.name my_wallet --wallet.hotkey default
+# Or install latest from source
+git clone https://github.com/opentensor/bittensor.git
+cd bittensor
+pip install -e .
+```
 
-# Register on subnet (requires TAO)
-btcli subnet register --wallet.name my_wallet --wallet.hotkey default --netuid 90
+### 3. Clone Repository
+```bash
+cd /home/$(whoami)
+git clone https://github.com/your-repo/bittensor-subnet-90-brain.git
+cd bittensor-subnet-90-brain
+```
+
+### 4. Create Python Environments
+
+#### For Validator
+```bash
+# Create validator environment
+python3.11 -m venv /home/$(whoami)/validators/validator_env
+source /home/$(whoami)/validators/validator_env/bin/activate
+
+# Install dependencies
+pip install --upgrade pip
+pip install torch==2.7.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+pip install bittensor==9.7.0
+pip install -r requirements.txt
+deactivate
+```
+
+#### For Miners (repeat for each miner)
+```bash
+# Create miner environments
+for miner in miner1 miner2 miner3; do
+    python3.11 -m venv /home/$(whoami)/miners/${miner}_env
+    source /home/$(whoami)/miners/${miner}_env/bin/activate
+    
+    # Install dependencies (CPU torch version - CRITICAL!)
+    pip install --upgrade pip
+    pip install torch==2.7.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+    pip install bittensor==9.7.0
+    pip install -r requirements.txt
+    
+    deactivate
+done
+```
+
+**⚠️ IMPORTANT**: Use CPU torch version (`torch==2.7.1+cpu`) not CUDA version, as CUDA causes startup hangs.
+
+---
+
+## 🏛️ Validator Setup
+
+### 1. Create Bittensor Wallet
+```bash
+# Create validator wallet
+btcli wallet create --wallet.name my_wallet --wallet.hotkey validator
+
+# Check balance (need 1+ TAO for registration)
+btcli wallet balance --wallet.name my_wallet
+```
+
+### 2. Register on Subnet 90
+```bash
+# Register validator (costs ~1 TAO)
+btcli subnet register --netuid 90 --wallet.name my_wallet --wallet.hotkey validator
+```
+
+### 3. Create Validator Startup Script
+```bash
+cat > /home/$(whoami)/start_degenbrain_validator.sh << 'EOF'
+#!/bin/bash
+
+echo "🏛️ Starting DegenBrain Validator"
+echo "================================="
+
+cd /home/$(whoami)/bittensor-subnet-90-brain
+
+# Set environment variables
+export WALLET_NAME="my_wallet"
+export HOTKEY_NAME="validator"
+export API_URL="https://api.subnet90.com"
+export NETWORK="finney"
+export SUBNET_UID="90"
+
+# Activate validator environment
+source /home/$(whoami)/validators/validator_env/bin/activate
+
+# Create logs directory
+mkdir -p /home/$(whoami)/logs
+
+# Start validator
+echo "Starting validator..."
+nohup python3 run_validator.py > /home/$(whoami)/logs/degenbrain_validator.log 2>&1 &
+VALIDATOR_PID=$!
+
+echo "✅ Validator started with PID: $VALIDATOR_PID"
+echo "📄 Logs: tail -f /home/$(whoami)/logs/degenbrain_validator.log"
+
+# Check if it started
+sleep 3
+if ps -p $VALIDATOR_PID > /dev/null 2>&1; then
+    echo "✅ Validator is running successfully"
+else
+    echo "❌ Validator failed to start - check logs"
+fi
+EOF
+
+chmod +x /home/$(whoami)/start_degenbrain_validator.sh
 ```
 
 ---
 
-## Core Components
+## ⛏️ Miner Setup
 
-### Validator (`validator/main.py`)
-
-The validator orchestrates the entire verification process:
-
-```python
-# Key validator functionality:
-class Validator:
-    async def run(self):
-        while self.running:
-            # 1. Fetch statements from DegenBrain API
-            statements = await self._fetch_statements()
-            
-            # 2. Process each statement  
-            for statement in statements:
-                responses = await self._query_miners(statement)
-                
-                # 3. Calculate consensus and scores
-                result = self.weights_calculator.calculate_consensus(statement, responses)
-                
-                # 4. Update weights (Phase 5: actual Bittensor integration)
-                await self._update_weights()
-```
-
-### Miner (`miner/main.py`)
-
-Miners process statements using pluggable agents:
-
-```python
-# Key miner functionality:
-class Miner:
-    async def run(self):
-        while self.running:
-            # 1. Get task from validator/API
-            task = await self._get_next_task()
-            
-            # 2. Process with agent
-            response = await self._process_task(task)
-            
-            # 3. Submit response (Phase 5: to validator)
-            await self._submit_response(response)
-```
-
-### Agent System (`miner/agents/`)
-
-Extensible agent framework for statement verification:
-
-```python
-class BaseAgent(ABC):
-    @abstractmethod
-    async def verify_statement(self, statement: Statement) -> MinerResponse:
-        """Analyze statement and return resolution with evidence."""
-        pass
-
-# Example: DummyAgent for testing
-agent = DummyAgent({"accuracy": 0.9, "confidence_range": (80, 95)})
-response = await agent.verify_statement(statement)
-```
-
-## Data Structures
-
-### Statement Input
-```python
-@dataclass
-class Statement:
-    statement: str          # "Bitcoin will reach $100,000 by Dec 31, 2024"
-    end_date: str          # "2024-12-31T23:59:59Z" 
-    createdAt: str         # "2024-01-15T12:00:00Z"
-    initialValue: float    # 42000.0 (starting price)
-    direction: str         # "increase"/"decrease"  
-    id: str               # Unique identifier
-```
-
-### Miner Response Output
-```python
-class MinerResponse(BaseModel):
-    statement: str          # Original statement
-    resolution: Resolution  # TRUE/FALSE/PENDING
-    confidence: float      # 0-100 confidence score
-    summary: str          # Reasoning explanation
-    sources: List[str]    # Evidence sources
-    target_value: float   # Extracted target (100000)
-    proof_hash: str       # Cryptographic verification
-    miner_uid: int        # Miner identifier
-```
-
-### Validation Result
-```python
-@dataclass  
-class ValidationResult:
-    consensus_resolution: Resolution    # Final consensus
-    consensus_confidence: float        # Average confidence
-    total_responses: int              # Miners queried
-    valid_responses: int             # Valid responses
-    miner_scores: Dict[int, float]   # UID -> score mapping
-    consensus_sources: List[str]     # Supporting evidence
-```
-
-## Testing & Quality Assurance
-
-### Run All Tests
+### 1. Create Miner Wallets
 ```bash
-python -m pytest tests/ -v
+# Create 3 miner hotkeys
+for i in {1..3}; do
+    btcli wallet create --wallet.name my_wallet --wallet.hotkey miner$i
+done
 ```
 
-### Test Coverage
-- **71 total tests** across all components
-- **Unit tests** for individual functions and classes
-- **Integration tests** for component interactions  
-- **Async tests** for concurrent operations
-- **Error handling tests** for resilience validation
-
-### Test Categories
+### 2. Register Miners on Subnet
 ```bash
-python -m pytest tests/test_validator.py -v  # Validator tests (20)
-python -m pytest tests/test_miner.py -v     # Miner tests (16)
-python -m pytest tests/test_api.py -v       # API tests (10)
-python -m pytest tests/test_types.py -v     # Data validation (15)
-python -m pytest tests/test_config.py -v    # Configuration (10)
+# Register each miner (costs ~1 TAO each)
+for i in {1..3}; do
+    btcli subnet register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner$i
+done
 ```
 
-## Monitoring & Logging
+### 3. Create Miner Startup Script
+```bash
+cat > /home/$(whoami)/start_degenbrain_miners.sh << 'EOF'
+#!/bin/bash
 
-The system provides comprehensive logging and monitoring:
+echo "🚀 Starting DegenBrain Miners"
+echo "============================="
 
-### Structured Logging
-```python
-# All components use structured logging
-logger.info("Statement processed", 
-           consensus="TRUE", 
-           confidence=85.3,
-           miners_queried=8,
-           valid_responses=7)
-```
+cd /home/$(whoami)/bittensor-subnet-90-brain
 
-### Performance Metrics
-```python
-# Validator statistics
-{
-    "statements_processed": 150,
-    "consensus_reached": 142, 
-    "miners_queried": 1500,
-    "consensus_rate": 0.947,
-    "uptime": "2:45:30"
+# Function to start a miner
+start_miner() {
+    local hotkey=$1
+    local expected_uid=$2
+    
+    echo "Starting miner $hotkey..."
+    
+    # Set environment variables
+    export WALLET_NAME="my_wallet"
+    export HOTKEY_NAME="$hotkey"
+    export API_URL="https://api.subnet90.com"
+    export NETWORK="finney"
+    export SUBNET_UID="90"
+    
+    # Activate correct miner environment
+    source /home/$(whoami)/miners/${hotkey}_env/bin/activate
+    
+    # Create logs directory
+    mkdir -p /home/$(whoami)/logs
+    
+    # Start miner in background
+    nohup python3 run_miner.py > /home/$(whoami)/logs/degenbrain_miner_${hotkey}.log 2>&1 &
+    local MINER_PID=$!
+    
+    echo "  ✅ Started miner $hotkey with PID: $MINER_PID"
+    echo "  📄 Logs: tail -f /home/$(whoami)/logs/degenbrain_miner_${hotkey}.log"
+    
+    # Check if it started
+    sleep 2
+    if ps -p $MINER_PID > /dev/null 2>&1; then
+        echo "  ✅ Miner $hotkey is running"
+    else
+        echo "  ❌ Miner $hotkey failed to start"
+    fi
+    echo
 }
 
-# Miner statistics  
-{
-    "tasks_processed": 89,
-    "success_rate": 0.966,
-    "avg_response_time": 1.2,
-    "agent": "DummyAgent"
-}
+# Start all 3 miners
+start_miner "miner1" "124"
+start_miner "miner2" "125" 
+start_miner "miner3" "126"
+
+echo "📊 All miners started. Check processes with:"
+echo "   ps aux | grep run_miner"
+EOF
+
+chmod +x /home/$(whoami)/start_degenbrain_miners.sh
 ```
 
-## Development Roadmap
+---
 
-### ✅ Phase 4: Core Implementation (Complete)
-- Validator orchestration and scoring
-- Miner agent framework
-- API integration and testing
-- Error handling and monitoring
+## 🚀 Running the System
 
-### 🚧 Phase 5: Bittensor Integration (Next)
-- Real miner querying via Bittensor dendrite
-- On-chain weight setting
-- Network synchronization
-- Wallet management
+### Easy Way (Recommended)
+```bash
+# For validators
+./start_validator.sh
 
-### 📋 Phase 6: Production Features (Future)
-- Advanced verification agents (web scraping, APIs)
-- Performance optimization and caching
-- Load balancing and scaling
-- Monitoring dashboard
+# For miners  
+./start_miner.sh
 
-## Documentation
+# Check everything
+./check_status.sh
+```
 
-- **`ARCHITECTURE.md`** - Detailed technical documentation
-- **`IMPLEMENTATION_PLAN.md`** - Development phases and milestones
-- **Code comments** - Inline documentation throughout
-- **Type hints** - Full type annotation for clarity
+### Manual Way (Advanced Users)
 
-## Contributing
+<details>
+<summary>Click to expand manual instructions</summary>
 
-The codebase is designed for extensibility:
+#### Start Validator
+```bash
+# Start the validator
+./start_degenbrain_validator.sh
 
-1. **Add new agents** by extending `BaseAgent`
-2. **Customize scoring** by modifying `WeightsCalculator`
-3. **Add data sources** through the API client
-4. **Extend monitoring** via structured logging
+# Monitor logs
+tail -f /home/$(whoami)/logs/degenbrain_validator.log
+```
 
-All contributions should include tests and maintain the existing code quality standards.
+#### Start Miners
+```bash
+# Start all miners
+./start_degenbrain_miners.sh
+
+# Monitor individual miners
+tail -f /home/$(whoami)/logs/degenbrain_miner_miner1.log
+tail -f /home/$(whoami)/logs/degenbrain_miner_miner2.log
+tail -f /home/$(whoami)/logs/degenbrain_miner_miner3.log
+```
+
+#### Verify Everything is Running
+```bash
+# Check all processes
+ps aux | grep -E "(run_validator|run_miner)" | grep -v grep
+
+# Expected output:
+# python3 run_validator.py  (1 process)
+# python3 run_miner.py     (3 processes)
+```
+
+</details>
+
+---
+
+## 📊 Monitoring & Troubleshooting
+
+### Check System Status
+```bash
+# Quick status check
+echo "=== VALIDATOR STATUS ==="
+ps aux | grep run_validator | grep -v grep && echo "✅ Validator Running" || echo "❌ Validator Stopped"
+
+echo "=== MINER STATUS ==="
+MINER_COUNT=$(ps aux | grep run_miner | grep -v grep | wc -l)
+echo "Miners Running: $MINER_COUNT/3"
+
+echo "=== RECENT VALIDATOR LOGS ==="
+tail -5 /home/$(whoami)/logs/degenbrain_validator.log
+
+echo "=== NETWORK METRICS ==="
+tail -10 /home/$(whoami)/logs/degenbrain_validator.log | grep -E "(Found active miners|valid_responses)"
+```
+
+### Check Validator Performance
+```bash
+# Look for key metrics in validator logs
+grep -E "(Statement validation complete|Found active miners|valid_responses)" /home/$(whoami)/logs/degenbrain_validator.log | tail -10
+
+# Expected patterns:
+# "Found active miners count=14"
+# "valid_responses=3" (or more)
+# "Statement validation complete confidence=XX.X consensus=TRUE/FALSE"
+```
+
+### Check Miner Performance
+```bash
+# Check if miners are responding
+for miner in miner1 miner2 miner3; do
+    echo "=== $miner Status ==="
+    if ps aux | grep "run_miner" | grep -v grep > /dev/null; then
+        echo "✅ Process running"
+    else
+        echo "❌ Process stopped"
+    fi
+    
+    # Check for recent activity
+    if [ -f "/home/$(whoami)/logs/degenbrain_miner_${miner}.log" ]; then
+        LAST_LOG=$(tail -1 /home/$(whoami)/logs/degenbrain_miner_${miner}.log)
+        if [ -n "$LAST_LOG" ]; then
+            echo "Last activity: $LAST_LOG"
+        else
+            echo "⚠️ No recent log entries"
+        fi
+    fi
+    echo
+done
+```
+
+### Common Issues & Solutions
+
+#### 1. Miner Won't Start
+```bash
+# Check environment activation
+source /home/$(whoami)/miners/miner1_env/bin/activate
+python3 -c "import torch; print(f'Torch version: {torch.__version__}')"
+
+# Should show: Torch version: 2.7.1+cpu
+# If it shows CUDA version, reinstall CPU torch:
+pip uninstall torch
+pip install torch==2.7.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+```
+
+#### 2. Validator Not Finding Miners
+```bash
+# Check if miners are registered
+btcli subnet list --netuid 90 | grep $(btcli wallet overview --wallet.name my_wallet | tail -n +3)
+```
+
+#### 3. No Valid Responses
+```bash
+# Check miner logs for errors
+for miner in miner1 miner2 miner3; do
+    echo "=== $miner errors ==="
+    grep -i error /home/$(whoami)/logs/degenbrain_miner_${miner}.log | tail -5
+done
+```
+
+#### 4. Restart Services
+```bash
+# Stop all services
+pkill -f "run_validator.py"
+pkill -f "run_miner.py"
+
+# Wait a moment
+sleep 5
+
+# Restart
+./start_degenbrain_validator.sh
+sleep 10
+./start_degenbrain_miners.sh
+```
+
+---
+
+## ⚙️ Configuration Reference
+
+### Environment Variables
+
+#### Required for All Components
+```bash
+export WALLET_NAME="my_wallet"     # Bittensor wallet name
+export API_URL="https://api.subnet90.com"  # DegenBrain API endpoint
+export NETWORK="finney"                  # Bittensor network
+export SUBNET_UID="90"                   # Subnet number
+```
+
+#### Validator Specific
+```bash
+export HOTKEY_NAME="validator"           # Validator hotkey name
+export VALIDATOR_PORT="8090"             # Validator port (optional)
+```
+
+#### Miner Specific
+```bash
+export HOTKEY_NAME="miner1"              # Miner hotkey name (miner1, miner2, miner3)
+export MINER_PORT="8091"                 # Miner port (optional)
+```
+
+### File Locations
+```
+/home/$(whoami)/
+├── bittensor-subnet-90-brain/           # Main codebase
+├── logs/                                # All log files
+│   ├── degenbrain_validator.log
+│   ├── degenbrain_miner_miner1.log
+│   ├── degenbrain_miner_miner2.log
+│   └── degenbrain_miner_miner3.log
+├── validators/
+│   └── validator_env/                   # Validator Python environment
+├── miners/
+│   ├── miner1_env/                      # Miner Python environments
+│   ├── miner2_env/
+│   └── miner3_env/
+├── start_degenbrain_validator.sh        # Validator startup script
+└── start_degenbrain_miners.sh          # Miner startup script
+```
+
+### Key Dependencies
+```
+Python 3.11+
+bittensor==9.7.0
+torch==2.7.1+cpu          # CRITICAL: Use CPU version
+structlog
+httpx
+tenacity
+pydantic
+```
+
+---
+
+## 🎯 Success Indicators
+
+When everything is working correctly, you should see:
+
+### Validator Logs
+```
+Found active miners count=14
+Received miner responses total_queried=14 valid_responses=3
+Statement validation complete confidence=XX.X consensus=TRUE/FALSE
+Weights set successfully
+```
+
+### Miner Logs
+```
+Verification complete resolution=TRUE/FALSE confidence=XX.X
+Processing verification request statement=...
+```
+
+### Process Check
+```bash
+# Should show 4 processes total
+ps aux | grep -E "(run_validator|run_miner)" | grep -v grep | wc -l
+# Output: 4
+```
+
+---
+
+## 📞 Support
+
+For issues or questions:
+1. Check the logs first: `/home/$(whoami)/logs/`
+2. Verify environment setup and dependencies
+3. Ensure all processes are running
+4. Check network connectivity and API access
+
+The system is designed to be robust and self-healing. Most issues can be resolved by restarting the affected components.
+
+---
+
+## 📚 Additional Documentation
+
+- **`ARCHITECTURE.md`** - Detailed technical architecture documentation
+- **`.env.example`** - Configuration template with all available options
