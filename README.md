@@ -104,7 +104,7 @@ pip install -e .
 ### 3. Clone Repository
 ```bash
 cd /home/$(whoami)
-git clone https://github.com/your-repo/bittensor-subnet-90-brain.git
+git clone https://github.com/degenpredict/bittensor-subnet-90-brain.git
 cd bittensor-subnet-90-brain
 ```
 
