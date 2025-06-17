@@ -205,31 +205,56 @@
                     <h3>Start Mining on Subnet 90</h3>
                     <p>Join the network and earn rewards by verifying prediction market statements with your AI agents.</p>
                     
-                    <h4>Quick Start:</h4>
+                    <h4>Quick Start (Easy Mode):</h4>
                     <pre class="code-block"><code># 1. Clone the repository
 git clone https://github.com/degenpredict/bittensor-subnet-90-brain
 cd bittensor-subnet-90-brain
 
-# 2. Install dependencies
+# 2. Run the interactive setup script
+./start_miner.sh
+
+# That's it! The script will guide you through:
+# - Environment setup
+# - Wallet creation
+# - Subnet registration
+# - Configuration
+# - Starting the miner</code></pre>
+
+                    <h4>Manual Setup (Advanced):</h4>
+                    <pre class="code-block"><code># 1. Install system dependencies
+sudo apt update && sudo apt upgrade -y
+sudo apt install python3.11 python3.11-venv python3.11-dev -y
+
+# 2. Create Python environment
+python3.11 -m venv /home/$(whoami)/miners/miner1_env
+source /home/$(whoami)/miners/miner1_env/bin/activate
+
+# 3. Install dependencies (CPU torch version - CRITICAL!)
+pip install --upgrade pip
+pip install torch==2.7.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+pip install bittensor==9.7.0
 pip install -r requirements.txt
 
-# 3. Set up your wallet
-btcli wallet create --wallet.name miner_wallet
+# 4. Set up your wallet
+btcli wallet create --wallet.name my_wallet --wallet.hotkey miner1
 
-# 4. Register on subnet 90
-btcli subnet register --netuid 90
+# 5. Register on subnet 90
+btcli subnet register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner1
 
-# 5. Configure and run
-export WALLET_NAME=miner_wallet
-export HOTKEY_NAME=default
+# 6. Configure and run
+export WALLET_NAME=my_wallet
+export HOTKEY_NAME=miner1
+export API_URL=https://api.subnet90.com
 python run_miner.py</code></pre>
                 </div>
                 <div class="content-right">
                     <h4>Miner Requirements:</h4>
                     <ul class="feature-list">
+                        <li>✅ Linux (Ubuntu 20.04+ recommended)</li>
                         <li>✅ Python 3.11+ environment</li>
+                        <li>✅ 1GB+ RAM per miner</li>
+                        <li>✅ 1+ TAO for registration</li>
                         <li>✅ Registered Bittensor wallet</li>
-                        <li>✅ Minimum stake for subnet 90</li>
                         <li>✅ Reliable internet connection</li>
                     </ul>
                     
@@ -239,6 +264,13 @@ python run_miner.py</code></pre>
                         <li>📈 Higher weights for consistent performance</li>
                         <li>🎯 Bonus for high-confidence correct answers</li>
                         <li>🔄 Continuous emission distribution</li>
+                    </ul>
+                    
+                    <h4>Monitoring & Status:</h4>
+                    <ul class="feature-list">
+                        <li>📊 Check status: <code>./check_status.sh</code></li>
+                        <li>📄 View logs: <code>tail -f ~/logs/degenbrain_miner_*.log</code></li>
+                        <li>🛑 Stop services: <code>./stop_all.sh</code></li>
                     </ul>
                 </div>
             </div>
@@ -254,22 +286,59 @@ python run_miner.py</code></pre>
                     <h3>Run a Validator Node</h3>
                     <p>Orchestrate the verification process and ensure network integrity by running a validator.</p>
                     
-                    <h4>Validator Setup:</h4>
-                    <pre class="code-block"><code># 1. Clone and setup (same as miner)
+                    <h4>Quick Start (Easy Mode):</h4>
+                    <pre class="code-block"><code># 1. Clone the repository
 git clone https://github.com/degenpredict/bittensor-subnet-90-brain
+cd bittensor-subnet-90-brain
 
-# 2. Ensure sufficient stake
-# Validators need higher stake than miners
+# 2. Run the interactive setup script
+./start_validator.sh
 
-# 3. Configure validator
-export WALLET_NAME=validator_wallet
+# That's it! The script will guide you through:
+# - Environment setup
+# - Wallet creation
+# - Subnet registration
+# - Configuration
+# - Starting the validator</code></pre>
+
+                    <h4>Manual Setup (Advanced):</h4>
+                    <pre class="code-block"><code># 1. Install system dependencies
+sudo apt update && sudo apt upgrade -y
+sudo apt install python3.11 python3.11-venv python3.11-dev -y
+
+# 2. Create Python environment
+python3.11 -m venv /home/$(whoami)/validators/validator_env
+source /home/$(whoami)/validators/validator_env/bin/activate
+
+# 3. Install dependencies (CPU torch version - CRITICAL!)
+pip install --upgrade pip
+pip install torch==2.7.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+pip install bittensor==9.7.0
+pip install -r requirements.txt
+
+# 4. Set up your wallet
+btcli wallet create --wallet.name my_wallet --wallet.hotkey validator
+
+# 5. Register on subnet 90 (costs ~1 TAO)
+btcli subnet register --netuid 90 --wallet.name my_wallet --wallet.hotkey validator
+
+# 6. Configure and run
+export WALLET_NAME=my_wallet
 export HOTKEY_NAME=validator
-export API_URL=https://api.degenbrain.com
-
-# 4. Run validator
+export API_URL=https://api.subnet90.com
 python run_validator.py</code></pre>
                 </div>
                 <div class="content-right">
+                    <h4>Validator Requirements:</h4>
+                    <ul class="feature-list">
+                        <li>✅ Linux (Ubuntu 20.04+ recommended)</li>
+                        <li>✅ Python 3.11+ environment</li>
+                        <li>✅ 2GB+ RAM for validator</li>
+                        <li>✅ 1+ TAO for registration</li>
+                        <li>✅ Higher stake than miners</li>
+                        <li>✅ 10GB+ storage space</li>
+                    </ul>
+                    
                     <h4>Validator Responsibilities:</h4>
                     <ul class="feature-list">
                         <li>📊 Fetch unresolved statements from API</li>
@@ -284,6 +353,13 @@ python run_validator.py</code></pre>
                         <li>🔐 Network governance participation</li>
                         <li>📈 Compound rewards through delegation</li>
                         <li>🤝 Shape subnet evolution</li>
+                    </ul>
+                    
+                    <h4>Monitoring & Status:</h4>
+                    <ul class="feature-list">
+                        <li>📊 Check status: <code>./check_status.sh</code></li>
+                        <li>📄 View logs: <code>tail -f ~/logs/degenbrain_validator.log</code></li>
+                        <li>🛑 Stop services: <code>./stop_all.sh</code></li>
                     </ul>
                 </div>
             </div>
