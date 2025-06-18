@@ -211,14 +211,17 @@ git clone https://github.com/degenpredict/bittensor-subnet-90-brain
 cd bittensor-subnet-90-brain
 
 # 2. Run the interactive setup script
-./start_miner.sh
+./start_fresh.sh
 
-# That's it! The script will guide you through:
+# 3. Start all processes with PM2
+./pm2_setup.sh all
+
+# That's it! The scripts will guide you through:
 # - Environment setup
 # - Wallet creation
 # - Subnet registration
 # - Configuration
-# - Starting the miner</code></pre>
+# - Starting miners with PM2</code></pre>
 
                     <h4>Manual Setup (Advanced):</h4>
                     <pre class="code-block"><code># 1. Install system dependencies
@@ -268,9 +271,9 @@ python run_miner.py</code></pre>
                     
                     <h4>Monitoring & Status:</h4>
                     <ul class="feature-list">
-                        <li>📊 Check status: <code>./check_status.sh</code></li>
-                        <li>📄 View logs: <code>tail -f ~/logs/degenbrain_miner_*.log</code></li>
-                        <li>🛑 Stop services: <code>./stop_all.sh</code></li>
+                        <li>📊 Check status: <code>pm2 status</code></li>
+                        <li>📄 View logs: <code>pm2 logs</code></li>
+                        <li>🛑 Stop services: <code>pm2 stop all</code></li>
                     </ul>
                 </div>
             </div>
@@ -292,14 +295,17 @@ git clone https://github.com/degenpredict/bittensor-subnet-90-brain
 cd bittensor-subnet-90-brain
 
 # 2. Run the interactive setup script
-./start_validator.sh
+./start_fresh.sh
 
-# That's it! The script will guide you through:
+# 3. Start all processes with PM2
+./pm2_setup.sh all
+
+# That's it! The scripts will guide you through:
 # - Environment setup
 # - Wallet creation
 # - Subnet registration
 # - Configuration
-# - Starting the validator</code></pre>
+# - Starting validator with PM2</code></pre>
 
                     <h4>Manual Setup (Advanced):</h4>
                     <pre class="code-block"><code># 1. Install system dependencies
@@ -357,9 +363,9 @@ python run_validator.py</code></pre>
                     
                     <h4>Monitoring & Status:</h4>
                     <ul class="feature-list">
-                        <li>📊 Check status: <code>./check_status.sh</code></li>
-                        <li>📄 View logs: <code>tail -f ~/logs/degenbrain_validator.log</code></li>
-                        <li>🛑 Stop services: <code>./stop_all.sh</code></li>
+                        <li>📊 Check status: <code>pm2 status</code></li>
+                        <li>📄 View logs: <code>pm2 logs</code></li>
+                        <li>🛑 Stop services: <code>pm2 stop all</code></li>
                     </ul>
                 </div>
             </div>

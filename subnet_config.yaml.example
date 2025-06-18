@@ -1,0 +1,92 @@
+# Bittensor Subnet 90 Configuration Template
+# Copy this to subnet_config.yaml and customize for your setup
+
+# You can also generate this based on user input using ./start_fresh.sh
+
+# Global settings applied to all processes
+global:
+  network: finney
+  subnet_uid: 90
+  api_url: https://api.subnet90.com
+  log_level: INFO
+  log_format: json
+  log_dir: ./logs
+  
+  # Process management
+  max_restarts: 10
+  min_uptime: 10s
+  restart_delay: 4000
+  
+  # Performance
+  max_workers: 4
+  request_timeout: 30
+
+# Validator configuration
+validator:
+  enabled: true
+  wallet_name: your_wallet_name     # Replace with your wallet
+  hotkey_name: validator            # Replace with your hotkey
+  port: 8090
+  validator_id: your_unique_id      # Replace with unique identifier
+  
+  # Validator-specific settings
+  bootstrap_mode: true
+  min_stake_threshold: 1000
+  
+  # Process settings
+  max_restarts: 20
+  
+  # Virtual environment - update path for your setup
+  venv_path: /home/your_user/bittensor-subnet-90-brain/.venv
+
+# Miners configuration
+miners:
+  # Miner 1 - Hybrid strategy (recommended for learning)
+  - id: miner1
+    enabled: true
+    wallet_name: your_wallet_name   # Replace with your wallet
+    hotkey_name: miner1             # Replace with your hotkey
+    port: 8091
+    strategy: hybrid
+    venv_path: /home/your_user/bittensor-subnet-90-brain/.venv
+    
+    # Strategy weights for hybrid
+    strategy_weights:
+      ai: 0.6
+      heuristic: 0.4
+
+  # Miner 2 - Dummy strategy (for testing)
+  - id: miner2
+    enabled: true
+    wallet_name: your_wallet_name   # Replace with your wallet
+    hotkey_name: miner2             # Replace with your hotkey
+    port: 8092
+    strategy: dummy
+    venv_path: /home/your_user/bittensor-subnet-90-brain/.venv
+
+  # Miner 3 - AI reasoning strategy (requires API keys)
+  - id: miner3
+    enabled: false                  # Enable only if you have AI API keys
+    wallet_name: your_wallet_name   # Replace with your wallet
+    hotkey_name: miner3             # Replace with your hotkey
+    port: 8093
+    strategy: ai_reasoning
+    venv_path: /home/your_user/bittensor-subnet-90-brain/.venv
+    
+    # Strategy-specific settings
+    model_config:
+      temperature: 0.7
+      max_tokens: 2000
+
+# PM2-specific configuration
+pm2:
+  log_rotation:
+    max_size: 100M
+    retain: 7d
+    compress: true
+  
+  health_check:
+    enabled: true
+    interval: 30s
+    timeout: 5s
+    max_failures: 3

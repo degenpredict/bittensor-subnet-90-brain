@@ -6,27 +6,37 @@ A Bittensor subnet for automated verification of prediction market statements th
 
 ## 🚀 Quick Start (Easy Mode)
 
-**For Validators:**
+### Option 1: Interactive Setup (Recommended)
 ```bash
-./start_validator.sh
+# Run interactive configuration wizard
+./start_fresh.sh
+
+# Start all processes
+./pm2_setup.sh all
 ```
 
-**For Miners:**
+### Option 2: Manual Configuration
 ```bash
-./start_miner.sh
+# Copy template and edit manually
+cp subnet_config.yaml.example subnet_config.yaml
+nano subnet_config.yaml  # Edit wallet names, paths, etc.
+
+# Start all processes
+./pm2_setup.sh all
 ```
 
 **Check Status:**
 ```bash
-./check_status.sh
+pm2 status
+pm2 logs
 ```
 
 **Stop Everything:**
 ```bash
-./stop_all.sh
+pm2 stop all
 ```
 
-That's it! The scripts will guide you through everything.
+That's it! The scripts will guide you through everything using PM2 process management.
 
 ---
 
@@ -327,16 +337,17 @@ MINER_STRATEGY=hybrid
 
 ## 🚀 Running the System
 
-### Easy Way (Recommended)
+### Easy Way (Recommended - PM2)
 ```bash
-# For validators
-./start_validator.sh
+# Interactive setup (first time)
+./start_fresh.sh
 
-# For miners  
-./start_miner.sh
+# Start all processes
+./pm2_setup.sh all
 
 # Check everything
-./check_status.sh
+pm2 status
+pm2 logs
 ```
 
 ### Manual Way (Advanced Users)

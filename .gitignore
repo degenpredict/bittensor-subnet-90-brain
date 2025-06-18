@@ -181,6 +181,13 @@ Cargo.lock
 # Go (if any Go components)
 vendor/
 
+# PM2 Process Manager
+.pm2/
+*.pid
+ecosystem.config.js.backup
+pm2.keymetrics
+pm2.log
+
 # Project specific
 # Add any project-specific files that shouldn't be committed
 experiments/
@@ -195,3 +202,9 @@ settings.local.json
 
 # Local Netlify folder
 .netlify
+.venv/
+
+# Subnet 90 specific
+subnet_config.yaml.backup
+*.yaml.bak
+subnet_config.yaml
