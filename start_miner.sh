@@ -47,6 +47,51 @@ echo "======================"
 read -p "Enter your wallet name (default: my_wallet): " WALLET_NAME
 WALLET_NAME=${WALLET_NAME:-my_wallet}
 
+# Check if wallet exists first
+if ! btcli wallet overview --wallet.name "$WALLET_NAME" >/dev/null 2>&1; then
+    echo "❌ Wallet '$WALLET_NAME' not found."
+    echo ""
+    echo "Please create your wallet first:"
+    echo "  btcli wallet create --wallet.name $WALLET_NAME"
+    exit 1
+fi
+
+# Show available hotkeys and let user choose
+echo ""
+echo "Available hotkeys in wallet '$WALLET_NAME':"
+HOTKEYS=$(btcli wallet list 2>/dev/null | sed -n "/Coldkey $WALLET_NAME/,/^├──\|^└──/p" | grep "Hotkey" | sed 's/.*Hotkey \([^ ]*\).*/\1/')
+if [ -z "$HOTKEYS" ]; then
+    echo "❌ No hotkeys found in wallet '$WALLET_NAME'"
+    echo ""
+    echo "Create a hotkey first:"
+    echo "  btcli wallet new-hotkey --wallet.name $WALLET_NAME"
+    exit 1
+fi
+
+# List hotkeys with numbers
+echo "$HOTKEYS" | nl -w2 -s') '
+echo ""
+read -p "Enter hotkey name or number (or press Enter for first available): " SELECTED_HOTKEY
+
+if [ -z "$SELECTED_HOTKEY" ]; then
+    SELECTED_HOTKEY=$(echo "$HOTKEYS" | head -n1)
+elif [[ "$SELECTED_HOTKEY" =~ ^[0-9]+$ ]]; then
+    # User entered a number, convert to hotkey name
+    SELECTED_HOTKEY=$(echo "$HOTKEYS" | sed -n "${SELECTED_HOTKEY}p")
+    if [ -z "$SELECTED_HOTKEY" ]; then
+        echo "❌ Invalid number. Please choose 1-$(echo "$HOTKEYS" | wc -l)"
+        exit 1
+    fi
+fi
+
+# Validate selected hotkey exists
+if ! echo "$HOTKEYS" | grep -q "^$SELECTED_HOTKEY$"; then
+    echo "❌ Hotkey '$SELECTED_HOTKEY' not found in wallet '$WALLET_NAME'"
+    exit 1
+fi
+
+echo "✅ Using hotkey: $SELECTED_HOTKEY"
+
 # Number of miners
 echo ""
 echo "How many miners do you want to run?"
@@ -64,6 +109,26 @@ case $MINER_CHOICE in
         ;;
     *)
         NUM_MINERS=1
+        ;;
+esac
+
+# Miner strategy
+echo ""
+echo "Select miner strategy:"
+echo "1) dummy - Simple mock responses (default - works without API keys)"
+echo "2) hybrid - Training mode - compare your AI against official resolutions"
+echo "3) ai_reasoning - Full independence - analyze statements without assistance"
+read -p "Choice (1-3): " STRATEGY_CHOICE
+
+case $STRATEGY_CHOICE in
+    2)
+        MINER_STRATEGY="hybrid"
+        ;;
+    3)
+        MINER_STRATEGY="ai_reasoning"
+        ;;
+    *)
+        MINER_STRATEGY="dummy"
         ;;
 esac
 
@@ -92,51 +157,72 @@ echo ""
 echo "📋 Configuration Summary:"
 echo "  Wallet: $WALLET_NAME"
 echo "  Miners: $NUM_MINERS"
+echo "  Strategy: $MINER_STRATEGY"
 echo "  Network: $NETWORK"
 echo "  Subnet: $SUBNET_UID"
 echo "  API: $API_URL"
 echo ""
 
-# Check if wallet exists
-echo "🔑 Checking wallet..."
-if ! btcli wallet overview --wallet.name "$WALLET_NAME" >/dev/null 2>&1; then
-    echo "❌ Wallet '$WALLET_NAME' not found."
-    echo ""
-    echo "Please create your wallet first:"
-    echo "  btcli wallet create --wallet.name $WALLET_NAME"
-    exit 1
-fi
+# Wallet and hotkey already validated above
 
 # Function to setup and start a single miner
 start_single_miner() {
     local MINER_ID=$1
-    local HOTKEY_NAME="miner$MINER_ID"
+    local HOTKEY_NAME
     
-    echo ""
-    echo "🔧 Setting up Miner $MINER_ID"
-    echo "=========================="
-    
-    # Check if hotkey exists
-    if ! btcli wallet overview --wallet.name "$WALLET_NAME" --wallet.hotkey "$HOTKEY_NAME" >/dev/null 2>&1; then
-        echo "⚠️  Hotkey '$HOTKEY_NAME' not found."
+    if [ $NUM_MINERS -eq 1 ]; then
+        # Single miner - use selected hotkey
+        HOTKEY_NAME="$SELECTED_HOTKEY"
+    else
+        # Multiple miners - need to ask for each hotkey name
         echo ""
-        echo "Create it with:"
-        echo "  btcli wallet create --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME"
+        echo "🔧 Setting up Miner $MINER_ID"
+        echo "=========================="
+        echo "Available hotkeys:"
+        echo "$HOTKEYS" | nl -w2 -s') '
         echo ""
-        read -p "Skip this miner and continue? (y/N): " SKIP
-        if [[ $SKIP =~ ^[Yy]$ ]]; then
-            return
-        else
-            exit 1
+        read -p "Enter hotkey name or number for miner $MINER_ID: " HOTKEY_NAME
+        
+        # Handle number input
+        if [[ "$HOTKEY_NAME" =~ ^[0-9]+$ ]]; then
+            HOTKEY_NAME=$(echo "$HOTKEYS" | sed -n "${HOTKEY_NAME}p")
+            if [ -z "$HOTKEY_NAME" ]; then
+                echo "⚠️  Invalid number. Please choose 1-$(echo "$HOTKEYS" | wc -l)"
+                read -p "Skip this miner and continue? (y/N): " SKIP
+                if [[ $SKIP =~ ^[Yy]$ ]]; then
+                    return
+                else
+                    exit 1
+                fi
+            fi
+        fi
+        
+        # Validate hotkey exists
+        if ! echo "$HOTKEYS" | grep -q "^$HOTKEY_NAME$"; then
+            echo "⚠️  Hotkey '$HOTKEY_NAME' not found in wallet."
+            read -p "Skip this miner and continue? (y/N): " SKIP
+            if [[ $SKIP =~ ^[Yy]$ ]]; then
+                return
+            else
+                exit 1
+            fi
         fi
     fi
     
+    echo ""
+    echo "🔧 Setting up Miner $MINER_ID with hotkey: $HOTKEY_NAME"
+    echo "=================================================="
+    
     # Check if registered
-    if ! btcli subnet list --netuid "$SUBNET_UID" | grep -q "$(btcli wallet overview --wallet.name "$WALLET_NAME" --wallet.hotkey "$HOTKEY_NAME" 2>/dev/null | grep "$HOTKEY_NAME" | awk '{print $NF}')"; then
+    echo "🔍 Checking registration for $HOTKEY_NAME..."
+    WALLET_JSON=$(btcli wallet overview --wallet.name "$WALLET_NAME" --wallet.hotkey "$HOTKEY_NAME" --json-output 2>/dev/null)
+    if echo "$WALLET_JSON" | grep -q "\"netuid\": $SUBNET_UID"; then
+        echo "✅ Hotkey '$HOTKEY_NAME' is registered on subnet $SUBNET_UID"
+    else
         echo "⚠️  Hotkey '$HOTKEY_NAME' not registered on subnet $SUBNET_UID"
         echo ""
-        echo "To register (costs ~1 TAO):"
-        echo "  btcli subnet register --netuid $SUBNET_UID --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME"
+        echo "To register (costs ~0.0136 TAO recycled):"
+        echo "  btcli subnets register --netuid $SUBNET_UID --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME"
         echo ""
         read -p "Continue anyway? (y/N): " CONTINUE
         if [[ ! $CONTINUE =~ ^[Yy]$ ]]; then
@@ -188,6 +274,9 @@ start_single_miner() {
     export API_URL="$API_URL"
     export NETWORK="$NETWORK"
     export SUBNET_UID="$SUBNET_UID"
+    export MINER_STRATEGY="$MINER_STRATEGY"
+    export LOG_FILE="$HOME/logs/degenbrain_miner_${HOTKEY_NAME}.log"
+    export LOG_LEVEL="INFO"
     
     # Activate environment and start
     source "$MINER_ENV_PATH/bin/activate"
@@ -243,8 +332,8 @@ echo "🎉 Miner setup complete!"
 echo ""
 echo "💡 Useful commands:"
 echo "  Check balance: btcli wallet balance --wallet.name $WALLET_NAME"
-echo "  View subnet: btcli subnet list --netuid $SUBNET_UID"
-echo "  Check registration: btcli subnet list --netuid $SUBNET_UID | grep \$(btcli wallet overview --wallet.name $WALLET_NAME | tail -n +3 | awk '{print \$NF}')"
+echo "  View subnet: btcli subnets show --netuid $SUBNET_UID"
+echo "  Check registration: btcli wallet overview --wallet.name $WALLET_NAME --json-output | grep '\"netuid\": $SUBNET_UID'"
 
 if [ $RUNNING_MINERS -eq 0 ]; then
     echo ""
