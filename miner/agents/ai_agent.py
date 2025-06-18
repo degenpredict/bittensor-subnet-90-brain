@@ -10,6 +10,7 @@ import aiohttp
 import structlog
 
 from miner.agents.base_agent import BaseAgent
+from miner.agents.resolution_api_client import ResolutionAPIClient
 from shared.types import Statement, MinerResponse, Resolution
 
 
@@ -40,8 +41,12 @@ class AIAgent(BaseAgent):
         self.alpha_vantage_api_key = config.get("alpha_vantage_api_key")
         
         # Strategy Configuration
-        self.strategy = config.get("strategy", "hybrid")  # "brainstorm", "ai_reasoning", "hybrid"
+        self.strategy = config.get("strategy", "ai_reasoning")  # "ai_reasoning", "hybrid", or "dummy"
         self.timeout = config.get("timeout", 30)
+        
+        # Resolution API Configuration
+        self.api_url = config.get("api_url", "https://api.subnet90.com")
+        self.resolution_client = ResolutionAPIClient(self.api_url, timeout=10)
         
         logger.info("AI Agent initialized", 
                    strategy=self.strategy,
@@ -49,24 +54,47 @@ class AIAgent(BaseAgent):
                    has_anthropic=bool(self.anthropic_api_key),
                    use_brainstorm=self.use_brainstorm)
     
-    async def verify_statement(self, statement: Statement) -> MinerResponse:
+    async def verify_statement(self, statement_or_synapse) -> MinerResponse:
         """
         Main verification method using AI and data sources.
         """
+        # Handle both Statement objects and synapse objects
+        if hasattr(statement_or_synapse, 'statement'):
+            # This is a synapse object
+            statement_text = statement_or_synapse.statement
+            statement_id = getattr(statement_or_synapse, 'statement_id', None)
+            statement = Statement(
+                statement=statement_or_synapse.statement,
+                end_date=statement_or_synapse.end_date,
+                createdAt=statement_or_synapse.created_at,
+                initialValue=statement_or_synapse.initial_value,
+                id=statement_id
+            )
+        else:
+            # This is a Statement object
+            statement = statement_or_synapse
+            statement_text = statement.statement
+            statement_id = statement.id
+        
         logger.info("Starting AI verification", 
-                   statement=statement.statement[:60] + "...",
-                   strategy=self.strategy)
+                   statement=statement_text[:60] + "...",
+                   strategy=self.strategy,
+                   statement_id=statement_id)
         
         try:
-            if self.strategy == "brainstorm":
-                return await self._verify_with_brainstorm(statement)
-            elif self.strategy == "ai_reasoning":
+            if self.strategy == "ai_reasoning":
+                # Check if AI keys are configured
+                if not self.openai_api_key and not self.anthropic_api_key:
+                    logger.warning("AI reasoning requested but no API keys configured")
+                    return self._create_basic_pending_response(statement)
                 return await self._verify_with_ai_reasoning(statement)
             elif self.strategy == "hybrid":
-                return await self._verify_hybrid(statement)
+                return await self._verify_hybrid(statement, statement_id)
             else:
-                logger.warning("Unknown strategy, falling back to hybrid", strategy=self.strategy)
-                return await self._verify_hybrid(statement)
+                logger.warning("Unknown strategy, falling back to ai_reasoning", strategy=self.strategy)
+                if not self.openai_api_key and not self.anthropic_api_key:
+                    return self._create_basic_pending_response(statement)
+                return await self._verify_with_ai_reasoning(statement)
                 
         except Exception as e:
             logger.error("AI verification failed", error=str(e))
@@ -122,25 +150,68 @@ class AIAgent(BaseAgent):
         
         return reasoning_result
     
-    async def _verify_hybrid(self, statement: Statement) -> MinerResponse:
+    async def _verify_with_resolution_api(self, statement: Statement, statement_id: str) -> Optional[MinerResponse]:
         """
-        Hybrid approach: Try brainstorm first, then AI reasoning, then ensemble.
+        Use the resolution API to get the official resolution for a statement.
+        
+        Args:
+            statement: Statement to verify
+            statement_id: ID of the statement
+            
+        Returns:
+            MinerResponse if resolution found, None otherwise
+        """
+        try:
+            async with self.resolution_client as client:
+                api_response = await client.get_resolution(statement_id)
+                
+                if api_response:
+                    # Convert API response to MinerResponse format
+                    response_data = client.convert_to_miner_response(api_response, statement.statement)
+                    
+                    return MinerResponse(
+                        statement=response_data["statement"],
+                        resolution=Resolution(response_data["resolution"]),
+                        confidence=response_data["confidence"],
+                        summary=response_data["summary"],
+                        sources=response_data["sources"],
+                        reasoning=response_data["reasoning"],
+                        target_value=response_data.get("target_value"),
+                        current_value=response_data.get("current_value")
+                    )
+                    
+        except Exception as e:
+            logger.error("Resolution API verification failed", 
+                        statement_id=statement_id, 
+                        error=str(e))
+        
+        return None
+    
+    async def _verify_hybrid(self, statement: Statement, statement_id: Optional[str] = None) -> MinerResponse:
+        """
+        Hybrid approach: Try resolution API first, then AI reasoning, then ensemble.
         """
         results = []
         
-        # Try brainstorm approach
-        try:
-            brainstorm_result = await self._verify_with_brainstorm(statement)
-            results.append(("brainstorm", brainstorm_result))
-        except:
-            pass
+        # First, try the resolution API if we have a statement ID
+        if statement_id:
+            try:
+                api_result = await self._verify_with_resolution_api(statement, statement_id)
+                if api_result:
+                    results.append(("resolution_api", api_result))
+                    logger.info("Resolution found in API", statement_id=statement_id)
+            except Exception as e:
+                logger.debug("Resolution API failed", statement_id=statement_id, error=str(e))
         
-        # Try AI reasoning approach
-        try:
-            ai_result = await self._verify_with_ai_reasoning(statement)
-            results.append(("ai_reasoning", ai_result))
-        except:
-            pass
+        # Try AI reasoning approach (if API keys are configured)
+        if self.openai_api_key or self.anthropic_api_key:
+            try:
+                ai_result = await self._verify_with_ai_reasoning(statement)
+                results.append(("ai_reasoning", ai_result))
+            except Exception as e:
+                logger.debug("AI reasoning failed", error=str(e))
+        else:
+            logger.info("No AI API keys configured, skipping AI reasoning")
         
         # If we have multiple results, ensemble them
         if len(results) > 1:
@@ -148,7 +219,11 @@ class AIAgent(BaseAgent):
         elif len(results) == 1:
             return results[0][1]
         else:
-            return self._create_error_response(statement, "All verification methods failed")
+            # If no AI keys are configured and no resolution found, provide a basic response
+            if not self.openai_api_key and not self.anthropic_api_key:
+                return self._create_basic_pending_response(statement)
+            else:
+                return self._create_error_response(statement, "All verification methods failed")
     
     async def _analyze_statement(self, statement: Statement) -> Dict[str, Any]:
         """
@@ -433,6 +508,17 @@ class AIAgent(BaseAgent):
             summary=f"Ensemble result from {len(results)} methods: " + "; ".join(summaries),
             sources=list(set(sources)),
             reasoning=f"Combined analysis from {len(results)} verification methods"
+        )
+    
+    def _create_basic_pending_response(self, statement: Statement) -> MinerResponse:
+        """Create a basic pending response when no AI keys are configured."""
+        return MinerResponse(
+            statement=statement.statement,
+            resolution=Resolution.PENDING,
+            confidence=50,
+            summary="No AI configuration available, unable to verify independently",
+            sources=["basic_analysis"],
+            reasoning="This miner requires resolution API data or AI API keys to provide accurate verification"
         )
     
     def _create_error_response(self, statement: Statement, error: str) -> MinerResponse:

@@ -45,6 +45,7 @@ class DegenBrainSynapse(bt.Synapse):
     statement: str = ""
     end_date: str = ""
     created_at: str = ""
+    statement_id: Optional[str] = None
     
     initial_value: Optional[float] = None
     context: Optional[Dict[str, Any]] = None
@@ -95,7 +96,8 @@ class ProtocolValidator:
         end_date: str,
         created_at: Optional[str] = None,
         initial_value: Optional[float] = None,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        statement_id: Optional[str] = None
     ) -> DegenBrainSynapse:
         """Create a request synapse with proper validation."""
         if created_at is None:
@@ -108,7 +110,8 @@ class ProtocolValidator:
             created_at=created_at,
             initial_value=initial_value,
             context=context or {},
-            protocol_version="1.0"
+            protocol_version="1.0",
+            statement_id=statement_id
         )
     
     @staticmethod

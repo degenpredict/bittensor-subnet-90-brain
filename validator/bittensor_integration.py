@@ -143,7 +143,8 @@ class BittensorValidator:
                 statement=statement.statement,
                 end_date=statement.end_date,
                 created_at=statement.createdAt,
-                initial_value=statement.initialValue
+                initial_value=statement.initialValue,
+                statement_id=statement.id
             )
             
             # Query miners

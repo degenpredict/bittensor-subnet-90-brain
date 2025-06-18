@@ -284,6 +284,44 @@ EOF
 chmod +x /home/$(whoami)/start_degenbrain_miners.sh
 ```
 
+### 4. Configure Miner Strategy (Optional)
+
+Miners support different verification strategies. Set `MINER_STRATEGY` in your `.env` file:
+
+```bash
+# Copy the example configuration
+cp .env.example .env
+
+# Edit your strategy (choose one):
+MINER_STRATEGY=dummy      # Default: Works without any API keys
+MINER_STRATEGY=hybrid     # Training mode: Uses official resolutions + optional AI
+MINER_STRATEGY=ai_reasoning  # Full independence: Requires AI API keys
+```
+
+#### Strategy Comparison:
+
+| Strategy | API Keys Required | Description |
+|----------|------------------|-------------|
+| **dummy** | None | Simple mock responses - perfect for testing |
+| **hybrid** | None (optional AI) | Training mode - uses official resolutions from `api.subnet90.com` |  
+| **ai_reasoning** | AI keys required | Full independence - analyzes statements without assistance |
+
+#### Hybrid Mode (Recommended for Training)
+```bash
+# Works immediately with zero configuration
+MINER_STRATEGY=hybrid
+
+# Optional: Add AI keys for unknown statements  
+# OPENAI_API_KEY=your_key_here
+# ANTHROPIC_API_KEY=your_key_here
+```
+
+**Hybrid mode** is perfect for learning:
+- ✅ **Zero setup** - works without any API keys
+- ✅ **Official resolutions** - learns from verified answers  
+- ✅ **Training phase** - prepares miners for independent analysis
+- 🔄 **Temporary** - will be phased out as subnet matures
+
 ---
 
 ## 🚀 Running the System

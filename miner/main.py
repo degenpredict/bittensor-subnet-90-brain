@@ -65,10 +65,10 @@ class Miner:
     def _create_default_agent(self) -> BaseAgent:
         """Create the default agent based on config."""
         agent_type = self.config.miner_agent
-        strategy = os.getenv("MINER_STRATEGY", "hybrid")
+        strategy = os.getenv("MINER_STRATEGY", "dummy")
         
         # If strategy is set to use AI agent, create AIAgent
-        if strategy in ["brainstorm", "ai_reasoning", "hybrid"] and strategy != "dummy":
+        if strategy in ["ai_reasoning", "hybrid"] and strategy != "dummy":
             from miner.agents.ai_agent import AIAgent
             
             # Create AI agent config from environment variables
@@ -78,7 +78,7 @@ class Miner:
                 "coingecko_api_key": os.getenv("COINGECKO_API_KEY"),
                 "alpha_vantage_api_key": os.getenv("ALPHA_VANTAGE_API_KEY"),
                 "strategy": strategy,
-                "brainstorm_url": os.getenv("BRAINSTORM_URL", "https://degenbrain-459147590380.us-central1.run.app"),
+                "api_url": self.config.api_url,  # Use the same API URL as the validator
                 "timeout": int(os.getenv("REQUEST_TIMEOUT", "30"))
             }
             
