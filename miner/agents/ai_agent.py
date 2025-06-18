@@ -66,7 +66,7 @@ class AIAgent(BaseAgent):
             statement = Statement(
                 statement=statement_or_synapse.statement,
                 end_date=statement_or_synapse.end_date,
-                createdAt=statement_or_synapse.created_at,
+                createdAt=getattr(statement_or_synapse, 'created_at', ''),
                 initialValue=statement_or_synapse.initial_value,
                 id=statement_id
             )

@@ -115,18 +115,20 @@ class BittensorValidator:
             # Sync metagraph to get latest state
             self.metagraph.sync(subtensor=self.subtensor)
             
-            # Get active miners (non-validators)
+            # Get all active miners (including own hotkey if serving)
             miner_axons = []
             miner_uids = []
             
             for uid, neuron in enumerate(self.metagraph.neurons):
-                # Skip if this is our own neuron
-                if neuron.hotkey == self.wallet.hotkey.ss58_address:
-                    continue
-                
                 # Skip if neuron is not active
                 if not neuron.axon_info.is_serving:
                     continue
+                
+                # Log if this is our own neuron (but still include it)
+                if neuron.hotkey == self.wallet.hotkey.ss58_address:
+                    logger.info("Including own hotkey as miner", 
+                               uid=uid, 
+                               hotkey=neuron.hotkey[:8] + "...")
                 
                 # Add to query list
                 miner_axons.append(neuron.axon_info)
@@ -136,7 +138,13 @@ class BittensorValidator:
                 logger.warning("No active miners found")
                 return []
             
-            logger.info("Found active miners", count=len(miner_axons))
+            logger.info("Miner discovery complete", 
+                       total_neurons=len(self.metagraph.neurons),
+                       serving_neurons=len(miner_axons),
+                       own_hotkey_included=any(
+                           self.metagraph.neurons[uid].hotkey == self.wallet.hotkey.ss58_address 
+                           for uid in miner_uids
+                       ))
             
             # Create synapse using official Subnet 90 protocol
             synapse = ProtocolValidator.create_request_synapse(
@@ -195,10 +203,7 @@ class BittensorValidator:
                 logger.info("Using bootstrap equal weights to start emissions")
                 active_miners = []
                 for uid, neuron in enumerate(self.metagraph.neurons):
-                    # Skip our own neuron
-                    if neuron.hotkey == self.wallet.hotkey.ss58_address:
-                        continue
-                    # Include all registered miners for bootstrap
+                    # Include all registered miners for bootstrap (including own if mining)
                     active_miners.append(uid)
                 
                 if active_miners:
