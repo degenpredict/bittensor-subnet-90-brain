@@ -104,11 +104,15 @@ fi
 
 # Check if registered
 echo "🔍 Checking registration..."
-if ! btcli subnet list --netuid "$SUBNET_UID" | grep -q "$(btcli wallet overview --wallet.name "$WALLET_NAME" --wallet.hotkey "$HOTKEY_NAME" 2>/dev/null | grep "$HOTKEY_NAME" | awk '{print $NF}')"; then
+# Use JSON output to reliably check registration
+WALLET_JSON=$(btcli wallet overview --wallet.name "$WALLET_NAME" --wallet.hotkey "$HOTKEY_NAME" --json-output 2>/dev/null)
+if echo "$WALLET_JSON" | grep -q "\"netuid\": $SUBNET_UID"; then
+    echo "✅ Hotkey '$HOTKEY_NAME' is registered on subnet $SUBNET_UID"
+else
     echo "⚠️  Hotkey '$HOTKEY_NAME' not registered on subnet $SUBNET_UID"
     echo ""
-    echo "To register (costs ~1 TAO):"
-    echo "  btcli subnet register --netuid $SUBNET_UID --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME"
+    echo "To register (costs ~0.0136 TAO recycled):"
+    echo "  btcli subnets register --netuid $SUBNET_UID --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME"
     echo ""
     read -p "Continue anyway? (y/N): " CONTINUE
     if [[ ! $CONTINUE =~ ^[Yy]$ ]]; then

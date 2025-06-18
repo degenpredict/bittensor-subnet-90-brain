@@ -17,6 +17,30 @@ from miner.bittensor_integration import create_miner
 
 
 # Set up structured logging
+import logging
+import sys
+
+# Configure Python's standard logging first
+log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+log_file = os.environ.get("LOG_FILE")
+
+# Set up handlers
+handlers = []
+if log_file:
+    # File handler
+    handlers.append(logging.FileHandler(log_file))
+    
+# Always add console handler for immediate feedback
+handlers.append(logging.StreamHandler(sys.stdout))
+
+# Configure root logger
+logging.basicConfig(
+    level=getattr(logging, log_level),
+    handlers=handlers,
+    format='%(asctime)s | %(levelname)8s | %(name)s:%(filename)s:%(lineno)d | %(message)s'
+)
+
+# Configure structlog to use standard logging
 structlog.configure(
     processors=[
         structlog.stdlib.filter_by_level,
@@ -26,10 +50,11 @@ structlog.configure(
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
-        structlog.dev.ConsoleRenderer()
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
     cache_logger_on_first_use=True,
 )
 
