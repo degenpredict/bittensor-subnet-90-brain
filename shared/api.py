@@ -45,6 +45,10 @@ class DegenBrainAPIClient:
         self.timeout = timeout
         self.client = httpx.AsyncClient(timeout=timeout)
         
+        # Rate limiting for test endpoint (15 minute minimum between calls)
+        self._last_fetch_time = 0
+        self._min_fetch_interval = 15 * 60  # 15 minutes in seconds
+        
     async def __aenter__(self):
         """Async context manager entry."""
         return self
@@ -67,35 +71,60 @@ class DegenBrainAPIClient:
         """
         Fetch pending statements from brain-api.
         
-        Fetches from /api/markets/pending endpoint to get statements
-        that need resolution by the subnet validators.
+        Fetches from /api/test/next-chunk endpoint with rate limiting.
+        This endpoint can only be called once every 15 minutes.
         
         Returns:
             List of Statement objects to resolve.
         """
         try:
-            logger.info("Fetching pending statements from brain-api", api_url=self.api_url)
+            # Check rate limiting
+            current_time = time.time()
+            time_since_last_fetch = current_time - self._last_fetch_time
             
-            # Fetch pending markets from brain-api
-            response = await self.client.get(f"{self.api_url}/api/markets/pending")
+            if time_since_last_fetch < self._min_fetch_interval:
+                time_remaining = self._min_fetch_interval - time_since_last_fetch
+                logger.debug("Rate limited - skipping fetch", 
+                           time_remaining_minutes=time_remaining / 60)
+                return []
+            
+            logger.info("Fetching next chunk from brain-api", api_url=self.api_url)
+            
+            # Get validator ID from config or generate one
+            config = get_config()
+            validator_id = getattr(config, 'validator_id', 'default_validator')
+            
+            # Fetch next chunk from brain-api with required validator_id  
+            response = await self.client.get(
+                f"{self.api_url}/api/test/next-chunk",
+                params={"validator_id": validator_id}
+            )
             response.raise_for_status()
             
-            data = response.json()
-            markets = data.get("markets", [])
+            # Update last fetch time on successful request
+            self._last_fetch_time = current_time
             
-            # Convert brain-api market format to Statement objects
+            data = response.json()
+            chunk_id = data.get("chunk_id")
+            statements_data = data.get("statements", [])
+            
+            logger.info("Received statement chunk", 
+                       chunk_id=chunk_id,
+                       count=len(statements_data))
+            
+            # Convert brain-api statement format to Statement objects
             statements = []
-            for market in markets:
-                statement_data = {
-                    "id": market["id"],
-                    "statement": market["statement"],
-                    "end_date": market["end_date"],
-                    "createdAt": market["createdAt"],
-                    "initialValue": market.get("initialValue"),
-                    "direction": market.get("direction"),
-                    "category": market.get("category")
-                }
-                statements.append(Statement.from_dict(statement_data))
+            for statement_data in statements_data:
+                statement_obj = Statement(
+                    id=statement_data["id"],
+                    statement=statement_data["statement"],
+                    end_date=statement_data["end_date"],
+                    createdAt=statement_data["createdAt"],
+                    initialValue=statement_data.get("initialValue"),
+                    direction=statement_data.get("direction"),
+                    category=statement_data.get("category")
+                )
+                statements.append(statement_obj)
             
             logger.info("Fetched pending statements", count=len(statements), api_url=self.api_url)
             return statements
@@ -105,6 +134,10 @@ class DegenBrainAPIClient:
                         status_code=e.response.status_code,
                         detail=e.response.text,
                         api_url=self.api_url)
+            if e.response.status_code == 429:
+                logger.warning("Rate limited by API - will retry in next cycle")
+                # Don't update last_fetch_time on rate limit so we retry sooner
+                return []
             raise
         except Exception as e:
             logger.error("Failed to fetch statements", error=str(e), api_url=self.api_url)

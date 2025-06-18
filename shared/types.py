@@ -192,6 +192,7 @@ class SubnetConfig:
     network: str
     subnet_uid: int
     api_url: str
+    validator_id: str = "default_validator"
     
     # Validator settings
     validator_port: int = 8090
@@ -219,6 +220,7 @@ class SubnetConfig:
             network=env_dict.get("NETWORK", "finney"),
             subnet_uid=int(env_dict.get("SUBNET_UID", "90")),
             api_url=env_dict.get("API_URL", "https://api.subnet90.com"),
+            validator_id=env_dict.get("VALIDATOR_ID", "default_validator"),
             validator_port=int(env_dict.get("VALIDATOR_PORT", "8090")),
             query_timeout=int(env_dict.get("QUERY_TIMEOUT", "60")),
             min_miners_required=int(env_dict.get("MIN_MINERS_REQUIRED", "3")),

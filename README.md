@@ -52,11 +52,12 @@ The subnet enables automated verification of prediction statements by distributi
 DegenBrain API → Validator → Miners → Consensus → Bittensor Weights
 ```
 
-1. **Validator** fetches unresolved statements from `https://api.subnet90.com`
+1. **Validator** fetches statement batches from `https://api.subnet90.com/api/test/next-chunk` (every 16+ minutes due to rate limiting)
 2. **Distributes** statements to registered miners on subnet 90
-3. **Miners** analyze statements and return resolution + confidence + evidence
-4. **Validator** calculates consensus and scores miners based on performance
-5. **Sets weights** on Bittensor to reward high-performing miners
+3. **Miners** query `https://api.subnet90.com/api/resolutions/{id}` for official resolutions (training mode)
+4. **Miners** return resolution + confidence + evidence to validator
+5. **Validator** calculates consensus and scores miners based on performance
+6. **Sets weights** on Bittensor to reward high-performing miners
 
 ---
 
@@ -492,6 +493,7 @@ export SUBNET_UID="90"                   # Subnet number
 #### Validator Specific
 ```bash
 export HOTKEY_NAME="validator"           # Validator hotkey name
+export VALIDATOR_ID="my_validator"       # Unique validator identifier (required for API)
 export VALIDATOR_PORT="8090"             # Validator port (optional)
 ```
 

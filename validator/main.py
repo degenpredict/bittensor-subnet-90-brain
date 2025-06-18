@@ -109,7 +109,8 @@ class Validator:
                     
                     if not statements:
                         logger.debug("No statements to process, waiting...")
-                        await asyncio.sleep(10)
+                        # Wait longer since API has rate limiting (16 min recommended interval)
+                        await asyncio.sleep(60)  # Wait 1 minute before trying again
                         continue
                     
                     # Process each statement

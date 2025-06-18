@@ -7,16 +7,9 @@ The DegenBrain subnet uses `api.subnet90.com` for validators to fetch pending st
 ## Current Architecture
 
 ```
-Validators → api.subnet90.com → Get pending statements
-Miners → Independent verification → Return responses to validators
-```
-
-## Proposed Architecture
-
-```
-Validators → api.subnet90.com → Get pending statements
-Miners → api.subnet90.com → Get resolved statements (when available)
-                          → Independent verification (when not resolved yet)
+Validators → api.subnet90.com/api/test/next-chunk → Get statement batches (every 15+ min)
+Miners → api.subnet90.com/api/resolutions/{id} → Get resolved statements (when available)
+       → Independent verification → Return responses to validators
 ```
 
 ## Benefits as Training Infrastructure
