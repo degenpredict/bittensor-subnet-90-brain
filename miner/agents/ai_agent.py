@@ -67,7 +67,6 @@ class AIAgent(BaseAgent):
                 statement=statement_or_synapse.statement,
                 end_date=statement_or_synapse.end_date,
                 createdAt=getattr(statement_or_synapse, 'created_at', ''),
-                initialValue=statement_or_synapse.initial_value,
                 id=statement_id
             )
         else:
@@ -112,9 +111,7 @@ class AIAgent(BaseAgent):
                 payload = {
                     "statement": statement.statement,
                     "end_date": statement.end_date,
-                    "createdAt": statement.createdAt,
-                    "initialValue": statement.initialValue,
-                    "direction": statement.direction
+                    "createdAt": statement.createdAt
                 }
                 
                 async with session.post(f"{self.brainstorm_url}/resolve", json=payload) as response:
