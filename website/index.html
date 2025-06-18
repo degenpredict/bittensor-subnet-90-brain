@@ -205,23 +205,31 @@
                     <h3>Start Mining on Subnet 90</h3>
                     <p>Join the network and earn rewards by verifying prediction market statements with your AI agents.</p>
                     
-                    <h4>Quick Start (Easy Mode):</h4>
+                    <h4>Option 1: Interactive Setup (Recommended)</h4>
                     <pre class="code-block"><code># 1. Clone the repository
 git clone https://github.com/degenpredict/bittensor-subnet-90-brain
 cd bittensor-subnet-90-brain
 
-# 2. Run the interactive setup script
+# 2. Run interactive configuration wizard
 ./start_fresh.sh
 
-# 3. Start all processes with PM2
-./pm2_setup.sh all
+# 3. Start all processes
+./pm2_setup.sh all</code></pre>
 
-# That's it! The scripts will guide you through:
-# - Environment setup
-# - Wallet creation
-# - Subnet registration
-# - Configuration
-# - Starting miners with PM2</code></pre>
+                    <h4>Option 2: Manual Setup</h4>
+                    <pre class="code-block"><code># 1. Set up Python environment
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install torch==2.7.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+pip install bittensor==9.7.0
+pip install -r requirements.txt
+
+# 2. Configure manually
+cp subnet_config.yaml.example subnet_config.yaml
+nano subnet_config.yaml  # Edit wallet names, paths, etc.
+
+# 3. Start miners only
+./pm2_setup.sh miners</code></pre>
 
                     <h4>Manual Setup (Advanced):</h4>
                     <pre class="code-block"><code># 1. Install system dependencies
@@ -289,23 +297,31 @@ python run_miner.py</code></pre>
                     <h3>Run a Validator Node</h3>
                     <p>Orchestrate the verification process and ensure network integrity by running a validator.</p>
                     
-                    <h4>Quick Start (Easy Mode):</h4>
+                    <h4>Option 1: Interactive Setup (Recommended)</h4>
                     <pre class="code-block"><code># 1. Clone the repository
 git clone https://github.com/degenpredict/bittensor-subnet-90-brain
 cd bittensor-subnet-90-brain
 
-# 2. Run the interactive setup script
+# 2. Run interactive configuration wizard
 ./start_fresh.sh
 
-# 3. Start all processes with PM2
-./pm2_setup.sh all
+# 3. Start validator only
+./pm2_setup.sh validator</code></pre>
 
-# That's it! The scripts will guide you through:
-# - Environment setup
-# - Wallet creation
-# - Subnet registration
-# - Configuration
-# - Starting validator with PM2</code></pre>
+                    <h4>Option 2: Manual Setup</h4>
+                    <pre class="code-block"><code># 1. Set up Python environment
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install torch==2.7.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+pip install bittensor==9.7.0
+pip install -r requirements.txt
+
+# 2. Configure manually
+cp subnet_config.yaml.example subnet_config.yaml
+nano subnet_config.yaml  # Edit wallet names, paths, etc.
+
+# 3. Start validator only
+./pm2_setup.sh validator</code></pre>
 
                     <h4>Manual Setup (Advanced):</h4>
                     <pre class="code-block"><code># 1. Install system dependencies
