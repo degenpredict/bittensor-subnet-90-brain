@@ -102,14 +102,24 @@ if ! btcli wallet overview --wallet.name "$WALLET_NAME" >/dev/null 2>&1; then
     exit 1
 fi
 
+# Check/create validator environment first
+VALIDATOR_ENV_PATH="$HOME/validators/validator_env"
+
 # Check if registered
 echo "🔍 Checking registration..."
+# Ensure we're using the correct btcli from validator environment
+if [ -d "$VALIDATOR_ENV_PATH" ]; then
+    source "$VALIDATOR_ENV_PATH/bin/activate"
+fi
 # Use JSON output to reliably check registration
 WALLET_JSON=$(btcli wallet overview --wallet.name "$WALLET_NAME" --wallet.hotkey "$HOTKEY_NAME" --json-output 2>/dev/null)
 if echo "$WALLET_JSON" | grep -q "\"netuid\": $SUBNET_UID"; then
     echo "✅ Hotkey '$HOTKEY_NAME' is registered on subnet $SUBNET_UID"
 else
     echo "⚠️  Hotkey '$HOTKEY_NAME' not registered on subnet $SUBNET_UID"
+    echo ""
+    echo "Debug info:"
+    echo "Wallet JSON: $WALLET_JSON"
     echo ""
     echo "To register (costs ~0.0136 TAO recycled):"
     echo "  btcli subnets register --netuid $SUBNET_UID --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME"
@@ -120,8 +130,6 @@ else
     fi
 fi
 
-# Check/create validator environment
-VALIDATOR_ENV_PATH="$HOME/validators/validator_env"
 echo "🐍 Checking Python environment..."
 
 if [ ! -d "$VALIDATOR_ENV_PATH" ]; then
