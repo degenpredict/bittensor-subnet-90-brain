@@ -51,6 +51,13 @@ WALLET_NAME=${WALLET_NAME:-my_wallet}
 read -p "Enter your validator hotkey name (default: validator): " HOTKEY_NAME
 HOTKEY_NAME=${HOTKEY_NAME:-validator}
 
+# Validator ID
+read -p "Enter your validator ID (unique identifier for API): " VALIDATOR_ID
+while [ -z "$VALIDATOR_ID" ]; do
+    echo "❌ Validator ID is required for API communication"
+    read -p "Enter your validator ID (unique identifier for API): " VALIDATOR_ID
+done
+
 # Network
 echo ""
 echo "Select Bittensor network:"
@@ -76,6 +83,7 @@ echo ""
 echo "📋 Configuration Summary:"
 echo "  Wallet: $WALLET_NAME"
 echo "  Hotkey: $HOTKEY_NAME"
+echo "  Validator ID: $VALIDATOR_ID"
 echo "  Network: $NETWORK"
 echo "  Subnet: $SUBNET_UID"
 echo "  API: $API_URL"
@@ -155,6 +163,7 @@ echo "===================="
 # Set environment variables
 export WALLET_NAME="$WALLET_NAME"
 export HOTKEY_NAME="$HOTKEY_NAME"
+export VALIDATOR_ID="$VALIDATOR_ID"
 export API_URL="$API_URL"
 export NETWORK="$NETWORK"
 export SUBNET_UID="$SUBNET_UID"
