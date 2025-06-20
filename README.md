@@ -17,11 +17,19 @@ A Bittensor subnet for automated verification of prediction market statements th
 
 ### Option 2: Manual Configuration
 ```bash
-# Copy template and edit manually
+# 1. Set up Python environment
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
+pip install bittensor==9.7.0
+pip install -r requirements.txt
+
+# 2. Copy template and edit manually
 cp subnet_config.yaml.example subnet_config.yaml
 nano subnet_config.yaml  # Edit wallet names, paths, etc.
 
-# Start all processes
+# 3. Start all processes
 ./pm2_setup.sh all
 ```
 
@@ -34,6 +42,36 @@ pm2 logs
 **Stop Everything:**
 ```bash
 pm2 stop all
+```
+
+### Running Specific Components
+
+**Validator Only:**
+```bash
+./pm2_setup.sh validator
+```
+
+**Miners Only:**
+```bash
+./pm2_setup.sh miners
+```
+
+**Individual Processes:**
+```bash
+pm2 start validator
+pm2 start miner1
+pm2 stop miner2
+pm2 restart miner3
+```
+
+**Disable Components (in subnet_config.yaml):**
+```yaml
+validator:
+  enabled: false  # Disable validator
+
+miners:
+  - id: miner1
+    enabled: false  # Disable specific miner
 ```
 
 That's it! The scripts will guide you through everything using PM2 process management.
@@ -129,7 +167,7 @@ source /home/$(whoami)/validators/validator_env/bin/activate
 
 # Install dependencies
 pip install --upgrade pip
-pip install torch==2.7.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
 pip install bittensor==9.7.0
 pip install -r requirements.txt
 deactivate
@@ -144,7 +182,7 @@ for miner in miner1 miner2 miner3; do
     
     # Install dependencies (CPU torch version - CRITICAL!)
     pip install --upgrade pip
-    pip install torch==2.7.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+    pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
     pip install bittensor==9.7.0
     pip install -r requirements.txt
     
@@ -454,7 +492,7 @@ python3 -c "import torch; print(f'Torch version: {torch.__version__}')"
 # Should show: Torch version: 2.7.1+cpu
 # If it shows CUDA version, reinstall CPU torch:
 pip uninstall torch
-pip install torch==2.7.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
 ```
 
 #### 2. Validator Not Finding Miners
