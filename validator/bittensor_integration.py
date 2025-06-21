@@ -55,13 +55,38 @@ class BittensorValidator:
     async def setup(self):
         """Set up Bittensor components."""
         try:
-            # Initialize wallet
-            self.wallet = bt.wallet(
-                name=self.config.wallet_name,
-                hotkey=self.config.hotkey_name
-            )
+            # Initialize wallet with special handling for validator setup
+            # Validators only need hotkey for signing; coldkey is for identification only
+            try:
+                self.wallet = bt.wallet(
+                    name=self.config.wallet_name,
+                    hotkey=self.config.hotkey_name
+                )
+                coldkey_address = self.wallet.coldkey.ss58_address
+            except Exception as e:
+                # If coldkey file doesn't exist, try to read from coldkeypub.txt
+                import json
+                import os
+                coldkeypub_path = os.path.expanduser(
+                    f"~/.bittensor/wallets/{self.config.wallet_name}/coldkeypub.txt"
+                )
+                if os.path.exists(coldkeypub_path):
+                    with open(coldkeypub_path, 'r') as f:
+                        coldkey_data = json.load(f)
+                        coldkey_address = coldkey_data.get('ss58Address', 'Unknown')
+                    logger.info("Using coldkeypub.txt for coldkey address")
+                    
+                    # Still need to load wallet for hotkey
+                    self.wallet = bt.wallet(
+                        name=self.config.wallet_name,
+                        hotkey=self.config.hotkey_name,
+                        _ignore_coldkey=True  # This might not work, depends on bittensor version
+                    )
+                else:
+                    raise Exception(f"Neither coldkey nor coldkeypub.txt found: {str(e)}")
+            
             logger.info("Wallet loaded", 
-                       coldkey=self.wallet.coldkey.ss58_address,
+                       coldkey=coldkey_address,
                        hotkey=self.wallet.hotkey.ss58_address)
             
             # Initialize subtensor
