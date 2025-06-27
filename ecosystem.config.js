@@ -99,7 +99,9 @@ if (apps.length === 0) {
   console.log(`  btcli wallet new_hotkey --wallet.name ${baseEnv.WALLET_NAME} --wallet.hotkey miner1`);
   console.log("\nMiners and validators will not start until their hotkeys have been created.\n");
 } else {
-  console.log(`\n✅ Found ${apps.length} hotkey(s), configuring: ${apps.map(a => a.name).join(", ")}\n`);
+  console.log(`\n✅ Found ${apps.length} hotkey(s), configuring: ${apps.map(a => a.name).join(", ")}`);
+  console.log("\n💡 Useful commands: pm2 status | pm2 logs | pm2 monit");
+  console.log("   See pm2-commands-reference.md for full command list\n");
 }
 
 module.exports = { apps };
