@@ -93,7 +93,6 @@ class BittensorMiner:
                 hotkey=self.config.hotkey_name
             )
             logger.info("Wallet loaded",
-                       coldkey=self.wallet.coldkey.ss58_address,
                        hotkey=self.wallet.hotkey.ss58_address)
             
             # Initialize subtensor
