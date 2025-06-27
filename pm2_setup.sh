@@ -19,11 +19,6 @@ CONFIG_PARSER="${PROJECT_DIR}/scripts/config_parser.py"
 echo -e "${GREEN}=== Bittensor Subnet 90 PM2 Setup ===${NC}"
 
 # Check if running as subnet90 user
-if [ "$USER" != "subnet90" ]; then
-    echo -e "${YELLOW}Warning: Not running as subnet90 user. Switching...${NC}"
-    exec sudo su - subnet90 -c "$0 $@"
-fi
-
 # Check prerequisites
 echo -e "\n${GREEN}Checking prerequisites...${NC}"
 
