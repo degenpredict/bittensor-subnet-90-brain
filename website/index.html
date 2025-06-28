@@ -86,8 +86,7 @@
             </div>
             <div class="nav-links">
                 <a href="#how-it-works">How it Works</a>
-                <a href="#miners">For Miners</a>
-                <a href="#validators">For Validators</a>
+                <a href="#quickstart">Quick Start</a>
                 <a href="#token">$BRAIN Token</a>
                 <a href="https://github.com/degenpredict/bittensor-subnet-90-brain" target="_blank" class="github-link">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -196,169 +195,89 @@
         </div>
     </section>
 
-    <!-- For Miners -->
-    <section id="miners" class="section">
+    <!-- Quick Start -->
+    <section id="quickstart" class="section">
         <div class="container">
-            <h2 class="section-title">For Miners</h2>
+            <h2 class="section-title">🚀 Quick Start</h2>
             <div class="content-split">
                 <div class="content-left">
-                    <h3>Start Mining on Subnet 90</h3>
-                    <p>Join the network and earn rewards by verifying prediction market statements with your AI agents.</p>
-                    
-                    <h4>Option 1: Interactive Setup (Recommended)</h4>
-                    <pre class="code-block"><code># 1. Clone the repository
-git clone https://github.com/degenpredict/bittensor-subnet-90-brain
-cd bittensor-subnet-90-brain
+                    <h4>1. Install System Dependencies</h4>
+                    <pre class="code-block"><code># Update system and install Python 3.11 + dev tools
+sudo apt update && sudo apt upgrade -y
+sudo apt install python3.11 python3.11-venv python3.11-dev git curl build-essential -y</code></pre>
 
-# 2. Run interactive configuration wizard
-./start_fresh.sh
+                    <h4>2. Clone Repository</h4>
+                    <pre class="code-block"><code>git clone https://github.com/degenpredict/bittensor-subnet-90-brain.git
+cd bittensor-subnet-90-brain</code></pre>
 
-# 3. Start all processes
-./pm2_setup.sh all</code></pre>
-
-                    <h4>Option 2: Manual Setup</h4>
-                    <pre class="code-block"><code># 1. Set up Python environment
+                    <h4>3. Setup Environment</h4>
+                    <pre class="code-block"><code># Create and activate virtual environment
 python3.11 -m venv .venv
 source .venv/bin/activate
-pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
-pip install bittensor==9.7.0
-pip install -r requirements.txt
-
-# 2. Configure manually
-cp subnet_config.yaml.example subnet_config.yaml
-nano subnet_config.yaml  # Edit wallet names, paths, etc.
-
-# 3. Start miners only
-./pm2_setup.sh miners</code></pre>
-
-                    <h4>Manual Setup (Advanced):</h4>
-                    <pre class="code-block"><code># 1. Install system dependencies
-sudo apt update && sudo apt upgrade -y
-sudo apt install python3.11 python3.11-venv python3.11-dev -y
-
-# 2. Create Python environment
-python3.11 -m venv /home/$(whoami)/miners/miner1_env
-source /home/$(whoami)/miners/miner1_env/bin/activate
-
-# 3. Install dependencies (CPU torch version - CRITICAL!)
 pip install --upgrade pip
+
+# Install PyTorch CPU version first (critical - prevents startup hangs)
 pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
-pip install bittensor==9.7.0
-pip install -r requirements.txt
 
-# 4. Set up your wallet
-btcli wallet create --wallet.name my_wallet --wallet.hotkey miner1
+# Install everything else
+pip install -r requirements.txt</code></pre>
 
-# 5. Register on subnet 90
-btcli subnet register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner1
+                    <h4>4. Create Wallet & Register</h4>
+                    <pre class="code-block"><code># Create coldkey first (your main wallet - keep this secure!)
+btcli wallet new_coldkey --wallet.name my_wallet
 
-# 6. Configure and run
-export WALLET_NAME=my_wallet
-export HOTKEY_NAME=miner1
-export API_URL=https://api.subnet90.com
-python run_miner.py</code></pre>
+# Create hotkey for first miner
+btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner_1
+
+# Register on subnet (costs ~1 TAO each)
+btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner_1
+
+# Optional: Create additional miners/validators and register them
+# btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner_2
+# btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner_2
+# btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey validator
+# btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey validator</code></pre>
+
+                    <h4>5. Configure</h4>
+                    <pre class="code-block"><code># Copy configuration template
+cp .env.example .env
+
+Your .env file will contain these default names:
+
+WALLET_NAME=my_wallet
+HOTKEY_NAME=miner_1
+
+If you used different names, edit with: nano .env</code></pre>
+
+                    <h4>6. Start Everything</h4>
+                    <pre class="code-block"><code># Start all processes with available hotkeys
+pm2 start ecosystem.config.js
+
+# Check status
+pm2 status
+pm2 logs</code></pre>
+
+                    <h4>7. Useful Commands</h4>
+                    <pre class="code-block"><code>pm2 restart ecosystem.config.js    # Restart all
+pm2 stop all                       # Stop all
+pm2 logs miner_1                   # View specific logs
+pm2 monit                          # Real-time monitoring</code></pre>
                 </div>
                 <div class="content-right">
-                    <h4>Miner Requirements:</h4>
+                    <h4>Prerequisites</h4>
                     <ul class="feature-list">
-                        <li>✅ Linux (Ubuntu 20.04+ recommended)</li>
-                        <li>✅ Python 3.11+ environment</li>
-                        <li>✅ 1GB+ RAM per miner</li>
-                        <li>✅ 1+ TAO for registration</li>
-                        <li>✅ Registered Bittensor wallet</li>
-                        <li>✅ Reliable internet connection</li>
+                        <li>✅ Linux (Ubuntu 22.04 LTS recommended)</li>
+                        <li>✅ 1+ TAO for registration costs (~1 TAO per hotkey)</li>
+                        <li>✅ 2GB+ RAM for validator, 1GB+ per miner</li>
+                        <li>✅ 10GB+ available storage space</li>
                     </ul>
                     
-                    <h4>Earning Potential:</h4>
+                    <h4>Miner Earning Potential:</h4>
                     <ul class="feature-list">
                         <li>💰 Rewards based on accuracy & quality</li>
                         <li>📈 Higher weights for consistent performance</li>
                         <li>🎯 Bonus for high-confidence correct answers</li>
                         <li>🔄 Continuous emission distribution</li>
-                    </ul>
-                    
-                    <h4>Monitoring & Status:</h4>
-                    <ul class="feature-list">
-                        <li>📊 Check status: <code>pm2 status</code></li>
-                        <li>📄 View logs: <code>pm2 logs</code></li>
-                        <li>🛑 Stop services: <code>pm2 stop all</code></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- For Validators -->
-    <section id="validators" class="section bg-light">
-        <div class="container">
-            <h2 class="section-title">For Validators</h2>
-            <div class="content-split">
-                <div class="content-left">
-                    <h3>Run a Validator Node</h3>
-                    <p>Orchestrate the verification process and ensure network integrity by running a validator.</p>
-                    
-                    <h4>Option 1: Interactive Setup (Recommended)</h4>
-                    <pre class="code-block"><code># 1. Clone the repository
-git clone https://github.com/degenpredict/bittensor-subnet-90-brain
-cd bittensor-subnet-90-brain
-
-# 2. Run interactive configuration wizard
-./start_fresh.sh
-
-# 3. Start validator only
-./pm2_setup.sh validator</code></pre>
-
-                    <h4>Option 2: Manual Setup</h4>
-                    <pre class="code-block"><code># 1. Set up Python environment
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
-pip install bittensor==9.7.0
-pip install -r requirements.txt
-
-# 2. Configure manually
-cp subnet_config.yaml.example subnet_config.yaml
-nano subnet_config.yaml  # Edit wallet names, paths, etc.
-
-# 3. Start validator only
-./pm2_setup.sh validator</code></pre>
-
-                    <h4>Manual Setup (Advanced):</h4>
-                    <pre class="code-block"><code># 1. Install system dependencies
-sudo apt update && sudo apt upgrade -y
-sudo apt install python3.11 python3.11-venv python3.11-dev -y
-
-# 2. Create Python environment
-python3.11 -m venv /home/$(whoami)/validators/validator_env
-source /home/$(whoami)/validators/validator_env/bin/activate
-
-# 3. Install dependencies (CPU torch version - CRITICAL!)
-pip install --upgrade pip
-pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
-pip install bittensor==9.7.0
-pip install -r requirements.txt
-
-# 4. Set up your wallet
-btcli wallet create --wallet.name my_wallet --wallet.hotkey validator
-
-# 5. Register on subnet 90 (costs ~1 TAO)
-btcli subnet register --netuid 90 --wallet.name my_wallet --wallet.hotkey validator
-
-# 6. Configure and run
-export WALLET_NAME=my_wallet
-export HOTKEY_NAME=validator
-export API_URL=https://api.subnet90.com
-python run_validator.py</code></pre>
-                </div>
-                <div class="content-right">
-                    <h4>Validator Requirements:</h4>
-                    <ul class="feature-list">
-                        <li>✅ Linux (Ubuntu 20.04+ recommended)</li>
-                        <li>✅ Python 3.11+ environment</li>
-                        <li>✅ 2GB+ RAM for validator</li>
-                        <li>✅ 1+ TAO for registration</li>
-                        <li>✅ Higher stake than miners</li>
-                        <li>✅ 10GB+ storage space</li>
                     </ul>
                     
                     <h4>Validator Responsibilities:</h4>
@@ -369,7 +288,7 @@ python run_validator.py</code></pre>
                         <li>⚖️ Set weights based on performance</li>
                     </ul>
                     
-                    <h4>Benefits:</h4>
+                    <h4>Validator Benefits:</h4>
                     <ul class="feature-list">
                         <li>🏆 Validator emissions (18% of total)</li>
                         <li>🔐 Network governance participation</li>
@@ -383,10 +302,16 @@ python run_validator.py</code></pre>
                         <li>📄 View logs: <code>pm2 logs</code></li>
                         <li>🛑 Stop services: <code>pm2 stop all</code></li>
                     </ul>
+                    
+                    <h4>Support</h4>
+                    <ul class="feature-list">
+                        <li><strong>📞 Join Discord</strong>: <a href="https://discord.gg/QtuWjbk7aF" target="_blank">Bittensor - Subnet 90 channel</a> and contact <code>@_enzi_</code></li>
+                    </ul>
                 </div>
             </div>
         </div>
     </section>
+
 
     <!-- Token Section -->
     <section id="token" class="section">

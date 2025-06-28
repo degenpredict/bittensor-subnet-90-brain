@@ -38,7 +38,7 @@ pip install --upgrade pip
 # Install PyTorch CPU version first (critical - prevents startup hangs)
 pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
 
-# Install everything else including bittensor==9.7.0
+# Install everything else
 pip install -r requirements.txt
 ```
 
@@ -87,8 +87,8 @@ pm2 logs
 ### 7. Useful Commands
 ```bash
 pm2 restart ecosystem.config.js    # Restart all
-pm2 stop all                       # Stop all  
-pm2 logs miner_1                    # View specific logs
+pm2 stop all                       # Stop all
+pm2 logs miner_1                   # View specific logs
 pm2 monit                          # Real-time monitoring
 ```
 
@@ -129,7 +129,7 @@ Miners support different verification strategies. Edit `MINER_STRATEGY` in your 
 #### Example Configuration:
 ```bash
 # In your .env file:
-MINER_STRATEGY=hybrid     # Recommended for training
+MINER_STRATEGY=hybrid
 
 # Optional: Add AI keys for unknown statements  
 # OPENAI_API_KEY=your_key_here
@@ -150,7 +150,7 @@ MINER_STRATEGY=hybrid     # Recommended for training
 ```bash
 pm2 status              # Check all process status
 pm2 logs                # View all logs in real-time
-pm2 logs miner_1         # View specific process logs
+pm2 logs miner_1        # View specific process logs
 pm2 monit               # Real-time monitoring dashboard
 ```
 
@@ -198,8 +198,11 @@ btcli wallet overview --wallet.name my_wallet
 
 #### 5. Complete Reset
 ```bash
-pm2 delete all          # Remove all processes
-pm2 start ecosystem.config.js    # Start fresh
+# Remove all processes
+pm2 delete all
+
+# Start fresh
+pm2 start ecosystem.config.js
 ```
 
 **See `pm2-commands-reference.md` for complete PM2 command reference.**
@@ -228,7 +231,7 @@ pm2 logs
 
 ## 📞 Support
 
-**Join Discord**: [Bittensor - Subnet 90 channel](https://discord.gg/QtuWjbk7aF) and contact `@_enzi_` for support
+**Join Discord**: [Bittensor - Subnet 90 channel](https://discord.gg/QtuWjbk7aF) and contact `@_enzi_`
 
 ---
 

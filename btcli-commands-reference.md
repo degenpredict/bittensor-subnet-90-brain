@@ -105,10 +105,10 @@ btcli view dashboard             # Open HTML dashboard
 
 # Create wallet and hotkey
 btcli wallet new-coldkey --wallet.name my_wallet
-btcli wallet new-hotkey --wallet.name my_wallet --wallet.hotkey miner1
+btcli wallet new-hotkey --wallet.name my_wallet --wallet.hotkey miner_1
 
 # Register on subnet
-btcli subnets register --wallet.name my_wallet --wallet.hotkey miner1 --netuid 90
+btcli subnets register --wallet.name my_wallet --wallet.hotkey miner_1 --netuid 90
 
 # Check balance and stakes
 btcli wallet balance --wallet.name my_wallet

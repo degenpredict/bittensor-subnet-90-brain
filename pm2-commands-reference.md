@@ -31,14 +31,14 @@ pm2 flush                           # Clear all logs
 
 ```bash
 # Start specific processes
-pm2 start ecosystem.config.js --only miner1
+pm2 start ecosystem.config.js --only miner_1
 pm2 start ecosystem.config.js --only "miner*"
 
 # Control individual processes
-pm2 restart miner1                  # Restart specific process
-pm2 stop miner1                     # Stop specific process
-pm2 delete miner1                   # Delete specific process
-pm2 reload miner1                   # Graceful reload
+pm2 restart miner_1                 # Restart specific process
+pm2 stop miner_1                    # Stop specific process
+pm2 delete miner_1                  # Delete specific process
+pm2 reload miner_1                  # Graceful reload
 ```
 
 ---
@@ -58,7 +58,7 @@ pm2 dump                            # Show saved configuration
 ## Process Scaling
 
 ```bash
-pm2 scale miner1 3                  # Scale miner1 to 3 instances
+pm2 scale miner_1 3                 # Scale miner_1 to 3 instances
 pm2 scale all +2                    # Add 2 instances to each process
 pm2 scale all -1                    # Remove 1 instance from each
 ```
@@ -69,7 +69,7 @@ pm2 scale all -1                    # Remove 1 instance from each
 
 ```bash
 pm2 logs                            # Stream all logs
-pm2 logs miner1                     # Stream specific process logs
+pm2 logs miner_1                    # Stream specific process logs
 pm2 logs --timestamp                # Add timestamps to logs
 pm2 logs --raw                      # Raw logs without PM2 formatting
 pm2 logs --err                      # Show only error logs
@@ -127,11 +127,11 @@ pm2 flush                           # Clear old logs
 
 ### Troubleshooting
 ```bash
-pm2 logs <name> --lines 100         # Check recent logs
-pm2 describe <name>                 # Check process details
-pm2 restart <name>                  # Restart problematic process
-pm2 delete <name>                   # Remove and recreate process
-pm2 start ecosystem.config.js --only <name>
+pm2 logs miner_1 --lines 100        # Check recent logs
+pm2 describe miner_1                # Check process details
+pm2 restart miner_1                 # Restart problematic process
+pm2 delete miner_1                  # Remove and recreate process
+pm2 start ecosystem.config.js --only miner_1
 ```
 
 ---
