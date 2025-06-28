@@ -144,7 +144,7 @@ MINER_STRATEGY=hybrid
 
 ---
 
-## 📊 Monitoring & Troubleshooting
+## 🔍 Troubleshooting
 
 ### Basic Monitoring
 ```bash
@@ -213,13 +213,11 @@ pm2 start ecosystem.config.js
 
 When everything is working correctly, you should see:
 
-### PM2 Status
 ```bash
 pm2 status
 # Should show processes as "online"
 ```
 
-### Process Logs
 ```bash
 pm2 logs
 # Look for:
@@ -232,11 +230,15 @@ pm2 logs
 ## 📞 Support
 
 **Join Discord**: [Bittensor - Subnet 90 channel](https://discord.gg/QtuWjbk7aF) and contact `@_enzi_`
+<<<<<<< Updated upstream
 
 ---
 
 ## 📚 Additional Documentation
+=======
+>>>>>>> Stashed changes
 
+**Additional Documentation**:
 - **`pm2-commands-reference.md`** - Complete PM2 command reference
 - **`btcli-commands-reference.md`** - Bittensor CLI commands
 - **`.env.example`** - Configuration template with all available options
