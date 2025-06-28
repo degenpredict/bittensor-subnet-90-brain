@@ -48,14 +48,14 @@ pip install -r requirements.txt
 btcli wallet new_coldkey --wallet.name my_wallet
 
 # Create hotkey for first miner
-btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner1
+btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner_1
 
 # Register on subnet (costs ~1 TAO each)
-btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner1
+btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner_1
 
 # Optional: Create additional miners/validators and register them
-# btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner2
-# btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner2
+# btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner_2
+# btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner_2
 # btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey validator
 # btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey validator
 ```
@@ -69,7 +69,7 @@ cp .env.example .env
 Your `.env` file will contain these default names:
 ```bash
 WALLET_NAME=my_wallet
-HOTKEY_NAME=miner1
+HOTKEY_NAME=miner_1
 ```
 
 If you used different names, edit with: `nano .env`
@@ -88,7 +88,7 @@ pm2 logs
 ```bash
 pm2 restart ecosystem.config.js    # Restart all
 pm2 stop all                       # Stop all  
-pm2 logs miner1                    # View specific logs
+pm2 logs miner_1                    # View specific logs
 pm2 monit                          # Real-time monitoring
 ```
 
@@ -150,7 +150,7 @@ MINER_STRATEGY=hybrid     # Recommended for training
 ```bash
 pm2 status              # Check all process status
 pm2 logs                # View all logs in real-time
-pm2 logs miner1         # View specific process logs
+pm2 logs miner_1         # View specific process logs
 pm2 monit               # Real-time monitoring dashboard
 ```
 
@@ -182,7 +182,7 @@ cat .env
 
 # Should contain at minimum:
 # WALLET_NAME=my_wallet
-# HOTKEY_NAME=miner1
+# HOTKEY_NAME=miner_1
 # API_URL="https://api.subnet90.com"
 
 # Compare with example

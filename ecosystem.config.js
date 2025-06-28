@@ -39,14 +39,14 @@ const baseEnv = {
 
 // Configuration for miners
 const minerConfigs = [
-  { name: "miner1", port: "8091", hotkey: "miner1" },
-  { name: "miner2", port: "8092", hotkey: "miner2" },
-  { name: "miner3", port: "8093", hotkey: "miner3" }
+  { name: "miner_1", port: "8091", hotkey: "miner_1" },
+  { name: "miner_2", port: "8092", hotkey: "miner_2" },
+  { name: "miner_3", port: "8093", hotkey: "miner_3" }
 ];
 
 // Configuration for validators
 const validatorConfigs = [
-  { name: "validator1", port: "9091", hotkey: "validator" }
+  { name: "validator_1", port: "9091", hotkey: "validator" }
 ];
 
 // Generate app configurations
@@ -96,7 +96,7 @@ if (apps.length === 0) {
   console.log("\n⚠️  WARNING: No hotkeys found!");
   console.log(`Searched in: ${path.join(process.env.HOME, ".bittensor", "wallets", baseEnv.WALLET_NAME, "hotkeys")}`);
   console.log("\nTo create hotkeys, run:");
-  console.log(`  btcli wallet new_hotkey --wallet.name ${baseEnv.WALLET_NAME} --wallet.hotkey miner1`);
+  console.log(`  btcli wallet new_hotkey --wallet.name ${baseEnv.WALLET_NAME} --wallet.hotkey miner_1`);
   console.log("\nMiners and validators will not start until their hotkeys have been created.\n");
 } else {
   console.log(`\n✅ Found ${apps.length} hotkey(s), configuring: ${apps.map(a => a.name).join(", ")}`);
