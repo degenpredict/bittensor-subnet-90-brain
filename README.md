@@ -230,13 +230,6 @@ pm2 logs
 ## 📞 Support
 
 **Join Discord**: [Bittensor - Subnet 90 channel](https://discord.gg/QtuWjbk7aF) and contact `@_enzi_`
-<<<<<<< Updated upstream
-
----
-
-## 📚 Additional Documentation
-=======
->>>>>>> Stashed changes
 
 **Additional Documentation**:
 - **`pm2-commands-reference.md`** - Complete PM2 command reference
