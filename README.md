@@ -42,26 +42,37 @@ pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
 ```
 
-### 4. Configure
-```bash
-# Copy configuration template
-cp .env.example .env
-nano .env  # Edit WALLET_NAME, HOTKEY_NAME, API_URL
-```
-
-### 5. Create Wallet & Register
+### 4. Create Wallet & Register
 ```bash
 # Create coldkey first (your main wallet - keep this secure!)
 btcli wallet new_coldkey --wallet.name my_wallet
 
-# Create hotkeys for your miners/validators
+# Create hotkey for first miner
 btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner1
-btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner2  # optional
-btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey validator  # optional
 
 # Register on subnet (costs ~1 TAO each)
 btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner1
+
+# Optional: Create additional miners/validators and register them
+# btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey miner2
+# btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey miner2
+# btcli wallet new_hotkey --wallet.name my_wallet --wallet.hotkey validator
+# btcli subnets register --netuid 90 --wallet.name my_wallet --wallet.hotkey validator
 ```
+
+### 5. Configure
+```bash
+# Copy configuration template
+cp .env.example .env
+```
+
+Your `.env` file will contain these default names:
+```bash
+WALLET_NAME=my_wallet
+HOTKEY_NAME=miner1
+```
+
+If you used different names, edit with: `nano .env`
 
 ### 6. Start Everything
 ```bash
